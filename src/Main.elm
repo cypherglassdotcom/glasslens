@@ -1,8 +1,13 @@
 module Main exposing (..)
 
-import Html exposing (Html, text, div, section, h1, img, p, a, nav, span)
-import Html.Attributes exposing (src, class, attribute)
+import Html exposing (Html, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td)
+import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
+import Json.Encode as JE
+import Json.Decode as JD
+import Json.Decode.Pipeline as JDP
+import Http
+import Time
 
 
 ---- PROGRAM & INITS ----
@@ -14,13 +19,20 @@ main =
         { view = view
         , init = init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
 
 
 init : ( Model, Cmd Msg )
 init =
     ( initialModel, Cmd.none )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Time.every Time.second Tick
+        ]
 
 
 
@@ -37,10 +49,25 @@ type Step
 
 type alias Producer =
     { account : String
-    , rank : Int
-    , votes : Float
-    , percentage : Float
+    , totalVotes : Float
+    , producerKey : String
+    , isActive : Bool
     , url : String
+    , rank : Int
+    , votesPercentage : Float
+    }
+
+
+type NotificationType
+    = Success String
+    | Warning String
+    | Error String
+
+
+type alias Notification =
+    { notification : NotificationType
+    , time : Time.Time
+    , id : String
     }
 
 
@@ -48,6 +75,9 @@ type alias Model =
     { producers : List Producer
     , step : Step
     , pk : Maybe String
+    , isLoading : Int
+    , notifications : List Notification
+    , currentTime : Time.Time
     }
 
 
@@ -56,12 +86,15 @@ initialModel =
     { producers = []
     , step = Welcome
     , pk = Nothing
+    , isLoading = 0
+    , notifications = []
+    , currentTime = 0
     }
 
 
-apiUrl : String
-apiUrl =
-    "http://api.cypherglass.com:8888"
+producersApiUrl : String
+producersApiUrl =
+    "https://api.cypherglass.com/v1/chain/get_table_rows"
 
 
 
@@ -73,14 +106,31 @@ type Msg
     | ConfirmVote
     | GenerateTransaction
     | ConfirmTransaction
+    | ProducersResponse (Result Http.Error (List Producer))
+    | Tick Time.Time
+    | DeleteNotification String
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Tick time ->
+            ( { model
+                | currentTime = time
+                , notifications = updateNotifications model.notifications model.currentTime
+              }
+            , Cmd.none
+            )
+
         StartVoting ->
-            ( { model | step = ListBps, pk = Nothing }, Cmd.none )
+            ( { model
+                | step = ListBps
+                , pk = Nothing
+                , isLoading = model.isLoading + 1
+              }
+            , getProducersList
+            )
 
         ConfirmVote ->
             ( { model | step = EnterPk }, Cmd.none )
@@ -91,8 +141,97 @@ update msg model =
         ConfirmTransaction ->
             ( { model | step = SuccessFinal }, Cmd.none )
 
+        ProducersResponse (Ok producers) ->
+            ( { model | producers = producers, isLoading = model.isLoading - 1 }, Cmd.none )
+
+        ProducersResponse (Err _) ->
+            addError model "listProducersFail" "Fail to list Producers"
+
+        DeleteNotification id ->
+            let
+                notifications =
+                    model.notifications
+                        |> List.filter (\notification -> notification.id /= id)
+            in
+                ( { model | notifications = notifications }, Cmd.none )
+
         NoOp ->
             ( model, Cmd.none )
+
+
+addError : Model -> String -> String -> ( Model, Cmd msg )
+addError model msgId msgBody =
+    let
+        notifications =
+            Notification (Error msgBody) model.currentTime msgId
+                :: model.notifications
+    in
+        ( { model
+            | isLoading = model.isLoading - 1
+            , notifications = notifications
+          }
+        , Cmd.none
+        )
+
+
+updateNotifications : List Notification -> Time.Time -> List Notification
+updateNotifications notifications currentTime =
+    notifications
+        |> List.filter
+            (\notification ->
+                (currentTime - notification.time) < 10000
+            )
+
+
+isActiveNumToBool : JD.Decoder Bool
+isActiveNumToBool =
+    JD.int |> JD.andThen (\val -> JD.succeed (val == 1))
+
+
+producersDecoder : JD.Decoder (List Producer)
+producersDecoder =
+    JD.at [ "rows" ] (JD.list producerDecoder)
+
+
+producerDecoder : JD.Decoder Producer
+producerDecoder =
+    JDP.decode Producer
+        |> JDP.required "owner" JD.string
+        |> JDP.required "total_votes" JD.float
+        |> JDP.required "producer_key" JD.string
+        |> JDP.required "is_active" isActiveNumToBool
+        |> JDP.required "url" JD.string
+        |> JDP.hardcoded 5000
+        |> JDP.hardcoded 0.0
+
+
+getProducersList : Cmd Msg
+getProducersList =
+    let
+        body =
+            JE.object
+                [ ( "scope", JE.string "eosio" )
+                , ( "code", JE.string "eosio" )
+                , ( "table", JE.string "producers" )
+                , ( "json", JE.bool True )
+                , ( "limit", JE.int 5000 )
+                ]
+
+        request =
+            Http.request
+                { method = "POST"
+                , headers = []
+                , url = producersApiUrl
+                , body = Http.jsonBody body
+                , expect = Http.expectJson producersDecoder
+                , timeout = Nothing
+                , withCredentials = False
+                }
+
+        cmd =
+            Http.send ProducersResponse request
+    in
+        cmd
 
 
 
@@ -128,38 +267,146 @@ welcomeView model =
         ]
 
 
-pageView : Model -> List (Html msg) -> Html msg
+notification : Notification -> Html Msg
+notification notification =
+    let
+        ( txt, messageClass ) =
+            case notification.notification of
+                Success str ->
+                    ( str, "is-success" )
+
+                Warning str ->
+                    ( str, "is-warning" )
+
+                Error str ->
+                    ( str, "is-danger" )
+    in
+        div [ class ("notification on " ++ messageClass) ]
+            [ button
+                [ class "delete"
+                , onClick (DeleteNotification notification.id)
+                ]
+                []
+            , text txt
+            ]
+
+
+notificationsToasts : Model -> Html Msg
+notificationsToasts model =
+    div [ class "toast" ] (model.notifications |> List.map notification)
+
+
+pageView : Model -> List (Html Msg) -> Html Msg
 pageView model content =
     div []
         [ topMenu model
+        , notificationsToasts model
         , section [ class "section" ] [ div [ class "container" ] content ]
         ]
 
 
+icon : String -> Bool -> Bool -> Html msg
+icon icon spin isLeft =
+    let
+        spinner =
+            if spin then
+                " fa-spin"
+            else
+                ""
+
+        className =
+            "fa" ++ spinner ++ " fa-" ++ icon
+
+        classIcon =
+            if isLeft then
+                "icon is-left"
+            else
+                "icon"
+    in
+        span [ class classIcon ]
+            [ i [ class className ]
+                []
+            ]
+
+
+loadingIcon : Html msg
+loadingIcon =
+    icon "circle-o-notch" True False
+
+
 topMenu : Model -> Html msg
 topMenu model =
-    nav
-        [ attribute "aria-label" "main navigation"
-        , class "navbar topcg"
-        , attribute "role" "navigation"
-        ]
-        [ div [ class "navbar-brand logo" ]
-            [ img [ class "logo-img", src "assets/logo_horizontal.svg" ] []
-            , span [ class "title-span is-hidden-mobile" ] [ text "VOTING TOOL" ]
-            , span [ class "title-span is-hidden-tablet" ] [ text "VT" ]
+    let
+        isLoadingSpan =
+            if model.isLoading > 0 then
+                span [ class "loading-msg" ]
+                    [ text "Please wait... "
+                    , loadingIcon
+                    ]
+            else
+                text ""
+    in
+        nav
+            [ attribute "aria-label" "main navigation"
+            , class "navbar topcg"
+            , attribute "role" "navigation"
             ]
-        , div [ class "navbar-menu" ]
-            [ div [ class "navbar-end" ]
-                [ text "" ]
+            [ div [ class "navbar-brand logo" ]
+                [ img [ class "logo-img", src "assets/logo_horizontal.svg" ] []
+                , span [ class "title-span is-hidden-mobile" ] [ text "VOTING TOOL" ]
+                , span [ class "title-span is-hidden-tablet" ] [ text "VT" ]
+                , isLoadingSpan
+                ]
+            , div [ class "navbar-menu" ]
+                [ div [ class "navbar-end" ] [ text "" ]
+                ]
             ]
+
+
+producerRow : Producer -> Html msg
+producerRow producer =
+    tr []
+        [ td [] [ icon "check" False False ]
+        , td [] [ text producer.account ]
+        , td [] [ a [ href producer.url, target "_blank" ] [ text producer.url ] ]
+        , td [] [ text "353,879,888 EOS" ]
         ]
+
+
+producersList : List Producer -> Html msg
+producersList producers =
+    let
+        producersRows =
+            if List.length producers > 0 then
+                producers
+                    |> List.sortBy .rank
+                    |> List.map producerRow
+            else
+                [ tr []
+                    [ td
+                        [ colspan 4, class "has-text-centered" ]
+                        [ text "Producers not loaded" ]
+                    ]
+                ]
+    in
+        table [ class "table is-striped is-hoverable is-fullwidth" ]
+            [ thead []
+                (tr []
+                    [ th [] [ text "" ]
+                    , th [] [ text "Producer" ]
+                    , th [] [ text "Website" ]
+                    , th [] [ text "Vote Stats" ]
+                    ]
+                    :: producersRows
+                )
+            ]
 
 
 listBpsView : Model -> Html Msg
 listBpsView model =
     pageView model
         [ h1 [ class "title" ] [ text "Producers List" ]
-        , p [] [ text "Please vote Wisely!" ]
+        , producersList model.producers
         , a [ onClick ConfirmVote ] [ text "Confirm Vote" ]
         ]
 

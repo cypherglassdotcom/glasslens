@@ -273,12 +273,12 @@ html, body {
   @media (max-width: 1217px) {
     .topcg.navbar .navbar-item-text {
       display: none; } }
-  .topcg.navbar .monitor-stats {
+  .topcg.navbar .loading-msg {
+    margin-top: 18px;
     margin-left: 18px;
     font-size: 14px;
     font-weight: 400;
-    font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-    width: 200px; }
+    font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif; }
   .topcg.navbar .logo {
     font-family: 'Montserrat', sans-serif;
     color: #fff;
