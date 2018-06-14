@@ -250,10 +250,12 @@ html, body {
   background-color: #23114f;
   width: 100%;
   height: 100%;
+  min-height: 600px;
   color: #fff;
   margin: 0; }
   .welcome img {
-    max-width: 600px; }
+    max-width: 600px;
+    margin-top: 150px; }
 
 .topcg.navbar {
   background-color: #23114f;
@@ -279,20 +281,21 @@ html, body {
     font-size: 14px;
     font-weight: 400;
     font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif; }
-  .topcg.navbar .logo {
-    font-family: 'Montserrat', sans-serif;
-    color: #fff;
-    font-weight: 700;
-    font-size: 28px;
-    margin: 24px; }
-    .topcg.navbar .logo .title-span {
-      margin-left: 8px;
-      margin-top: 10px;
-      margin-right: 12px; }
-    .topcg.navbar .logo .logo-img {
-      max-width: 240px;
-      height: 80px;
-      margin-top: -10px; }
+
+.logo {
+  font-family: 'Montserrat', sans-serif;
+  color: #fff;
+  font-weight: 700;
+  font-size: 28px;
+  margin: 24px; }
+  .logo .title-span {
+    margin-left: 8px;
+    margin-top: 10px;
+    margin-right: 12px; }
+  .logo .logo-img {
+    max-width: 240px;
+    height: 80px;
+    margin-top: -10px; }
 
 .node-position {
   font-size: 10px; }
@@ -312,7 +315,7 @@ form {
 .greetings span {
   margin-left: 6px !important; }
 
-.has-top-margin {
+.has-margin-top {
   margin-top: 16px; }
 
 /* toast */

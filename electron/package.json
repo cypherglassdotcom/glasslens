@@ -1,5 +1,5 @@
 {
-  "name": "cypherglass-voting-electron",
+  "name": "cypherglass-lens-electron",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -10,5 +10,12 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^2.0.2"
+  },
+  "build": {
+     "appId": "com.cypherglass.lens",
+     "productName": "Cypherglass LENS",
+     "copyright": "Copyright © 2018 Cypherglass",
+     "buildResources": "./builder",
+     "output": "./dist"
   }
 }

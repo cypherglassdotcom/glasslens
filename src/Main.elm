@@ -1,12 +1,10 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Html exposing (Html, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
-import Json.Encode as JE
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
-import Http
 import Time
 
 
@@ -28,10 +26,25 @@ init =
     ( initialModel, Cmd.none )
 
 
+
+---- PORTS AND SUBSCRIPTIONS ----
+
+
+port listProducers : () -> Cmd msg
+
+
+port listProducersOk : (JD.Value -> msg) -> Sub msg
+
+
+port listProducersFail : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Time.every Time.second Tick
+        , listProducersOk ListProducersOk
+        , listProducersFail ListProducersFail
         ]
 
 
@@ -55,6 +68,7 @@ type alias Producer =
     , url : String
     , rank : Int
     , votesPercentage : Float
+    , selected : Bool
     }
 
 
@@ -92,9 +106,9 @@ initialModel =
     }
 
 
-producersApiUrl : String
-producersApiUrl =
-    "https://api.cypherglass.com/v1/chain/get_table_rows"
+cypherglassBpAccount : String
+cypherglassBpAccount =
+    "cypherglasss"
 
 
 
@@ -106,9 +120,11 @@ type Msg
     | ConfirmVote
     | GenerateTransaction
     | ConfirmTransaction
-    | ProducersResponse (Result Http.Error (List Producer))
     | Tick Time.Time
     | DeleteNotification String
+    | ListProducersOk JD.Value
+    | ListProducersFail String
+    | ToggleBpSelection String
     | NoOp
 
 
@@ -129,7 +145,7 @@ update msg model =
                 , pk = Nothing
                 , isLoading = model.isLoading + 1
               }
-            , getProducersList
+            , listProducers ()
             )
 
         ConfirmVote ->
@@ -141,11 +157,39 @@ update msg model =
         ConfirmTransaction ->
             ( { model | step = SuccessFinal }, Cmd.none )
 
-        ProducersResponse (Ok producers) ->
-            ( { model | producers = producers, isLoading = model.isLoading - 1 }, Cmd.none )
+        ToggleBpSelection account ->
+            let
+                producers =
+                    model.producers
+                        |> List.map
+                            (\producer ->
+                                if producer.account == account then
+                                    { producer | selected = not producer.selected }
+                                else
+                                    producer
+                            )
+            in
+                ( { model | producers = producers }, Cmd.none )
 
-        ProducersResponse (Err _) ->
-            addError model "listProducersFail" "Fail to list Producers"
+        ListProducersOk rawProducers ->
+            case (JD.decodeValue producersDecoder rawProducers) of
+                Ok producers ->
+                    let
+                        adjustedProducers =
+                            calcAndSortProducers producers
+                    in
+                        ( { model
+                            | producers = adjustedProducers
+                            , isLoading = model.isLoading - 1
+                          }
+                        , Cmd.none
+                        )
+
+                Err err ->
+                    addError model "listProducersFailParse" err
+
+        ListProducersFail err ->
+            addError model "listProducersFail" err
 
         DeleteNotification id ->
             let
@@ -157,6 +201,35 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+
+
+calcAndSortProducers : List Producer -> List Producer
+calcAndSortProducers producers =
+    producers
+        |> List.map
+            (\producer ->
+                if producer.account == cypherglassBpAccount then
+                    { producer | selected = True }
+                else
+                    producer
+            )
+        |> List.sortWith
+            (\a b ->
+                if a.account == cypherglassBpAccount then
+                    LT
+                else if b.account == cypherglassBpAccount then
+                    GT
+                else
+                    case compare a.totalVotes b.totalVotes of
+                        LT ->
+                            GT
+
+                        EQ ->
+                            EQ
+
+                        GT ->
+                            LT
+            )
 
 
 addError : Model -> String -> String -> ( Model, Cmd msg )
@@ -188,50 +261,38 @@ isActiveNumToBool =
     JD.int |> JD.andThen (\val -> JD.succeed (val == 1))
 
 
+stringToFloat : JD.Decoder Float
+stringToFloat =
+    JD.string
+        |> JD.andThen
+            (\val ->
+                JD.succeed
+                    (case String.toFloat val of
+                        Ok val ->
+                            val
+
+                        Err err ->
+                            0
+                    )
+            )
+
+
 producersDecoder : JD.Decoder (List Producer)
 producersDecoder =
-    JD.at [ "rows" ] (JD.list producerDecoder)
+    JD.list producerDecoder
 
 
 producerDecoder : JD.Decoder Producer
 producerDecoder =
     JDP.decode Producer
         |> JDP.required "owner" JD.string
-        |> JDP.required "total_votes" JD.float
+        |> JDP.required "total_votes" stringToFloat
         |> JDP.required "producer_key" JD.string
         |> JDP.required "is_active" isActiveNumToBool
         |> JDP.required "url" JD.string
         |> JDP.hardcoded 5000
         |> JDP.hardcoded 0.0
-
-
-getProducersList : Cmd Msg
-getProducersList =
-    let
-        body =
-            JE.object
-                [ ( "scope", JE.string "eosio" )
-                , ( "code", JE.string "eosio" )
-                , ( "table", JE.string "producers" )
-                , ( "json", JE.bool True )
-                , ( "limit", JE.int 5000 )
-                ]
-
-        request =
-            Http.request
-                { method = "POST"
-                , headers = []
-                , url = producersApiUrl
-                , body = Http.jsonBody body
-                , expect = Http.expectJson producersDecoder
-                , timeout = Nothing
-                , withCredentials = False
-                }
-
-        cmd =
-            Http.send ProducersResponse request
-    in
-        cmd
+        |> JDP.hardcoded False
 
 
 
@@ -261,9 +322,9 @@ welcomeView : Model -> Html Msg
 welcomeView model =
     div [ class "welcome" ]
         [ img [ src "assets/logo-cg.svg" ] []
-        , p [] [ text "Welcome to Cypherglass Voting Tool!" ]
-        , p [] [ text "This is a safe and easy tool to vote for EOS Block Producers" ]
-        , a [ onClick StartVoting ] [ text "Start Voting Session" ]
+        , p [ class "has-margin-top logo" ] [ text "VOTING" ]
+        , p [ class "has-margin-top" ] [ text "The safer and easiest way to vote for EOS Block Producers" ]
+        , a [ class "button is-info has-margin-top", onClick StartVoting ] [ text "Start Voting Session" ]
         ]
 
 
@@ -353,7 +414,7 @@ topMenu model =
             ]
             [ div [ class "navbar-brand logo" ]
                 [ img [ class "logo-img", src "assets/logo_horizontal.svg" ] []
-                , span [ class "title-span is-hidden-mobile" ] [ text "VOTING TOOL" ]
+                , span [ class "title-span is-hidden-mobile" ] [ text "VOTING" ]
                 , span [ class "title-span is-hidden-tablet" ] [ text "VT" ]
                 , isLoadingSpan
                 ]
@@ -363,23 +424,45 @@ topMenu model =
             ]
 
 
-producerRow : Producer -> Html msg
+
+-- eosnewyorkio	https://bp.eosnewyork.io	130,418,350,542,964,670
+-- eoscanadacom	https://www.eoscanada.com	123,929,333,890,318,540
+
+
+producerRow : Producer -> Html Msg
 producerRow producer =
-    tr []
-        [ td [] [ icon "check" False False ]
-        , td [] [ text producer.account ]
-        , td [] [ a [ href producer.url, target "_blank" ] [ text producer.url ] ]
-        , td [] [ text "353,879,888 EOS" ]
-        ]
+    let
+        checker =
+            if producer.selected then
+                a
+                    [ onClick (ToggleBpSelection producer.account)
+                    , class "has-text-success"
+                    ]
+                    [ icon "check" False False ]
+            else
+                a
+                    [ onClick (ToggleBpSelection producer.account)
+                    , class "has-text-grey"
+                    ]
+                    [ icon "close" False False ]
+
+        bpLink =
+            a [ href producer.url, target "_blank" ] [ text producer.url ]
+    in
+        tr []
+            [ td [] [ checker ]
+            , td [] [ text producer.account ]
+            , td [] [ bpLink ]
+            , td [] [ text (toString producer.totalVotes) ]
+            ]
 
 
-producersList : List Producer -> Html msg
+producersList : List Producer -> Html Msg
 producersList producers =
     let
         producersRows =
             if List.length producers > 0 then
                 producers
-                    |> List.sortBy .rank
                     |> List.map producerRow
             else
                 [ tr []
@@ -389,7 +472,7 @@ producersList producers =
                     ]
                 ]
     in
-        table [ class "table is-striped is-hoverable is-fullwidth" ]
+        table [ class "table has-margin-top is-striped is-hoverable is-fullwidth" ]
             [ thead []
                 (tr []
                     [ th [] [ text "" ]
@@ -402,13 +485,63 @@ producersList producers =
             ]
 
 
+titleMenu : String -> List (Html msg) -> Html msg
+titleMenu title menu =
+    div [ class "level" ]
+        [ div [ class "level-left" ]
+            [ div [ class "level-item" ] [ h1 [ class "title" ] [ text title ] ] ]
+        , div [ class "level-right" ]
+            (menu
+                |> List.map (\item -> div [ class "level-item" ] [ item ])
+            )
+        ]
+
+
 listBpsView : Model -> Html Msg
 listBpsView model =
-    pageView model
-        [ h1 [ class "title" ] [ text "Producers List" ]
-        , producersList model.producers
-        , a [ onClick ConfirmVote ] [ text "Confirm Vote" ]
-        ]
+    let
+        selectedProducers =
+            model.producers
+                |> List.filter (\p -> p.selected)
+
+        selectedProducersCount =
+            List.length selectedProducers
+
+        currentProducer =
+            List.head selectedProducers
+
+        ( voteButtonClass, voteButtonTxt, voteAttr, voteOp ) =
+            case currentProducer of
+                Just producer ->
+                    let
+                        text =
+                            if selectedProducersCount > 1 then
+                                "Confirm Vote for " ++ (toString selectedProducersCount) ++ " BPs"
+                            else
+                                "Confirm Vote for " ++ producer.account
+                    in
+                        if selectedProducersCount > 30 then
+                            ( "is-danger", "Max Vote Limit of 30 BPs has Passed", "disabled", NoOp )
+                        else
+                            ( "is-success", text, "autofocus", ConfirmVote )
+
+                Nothing ->
+                    ( "", "Select at Least one BP to Vote", "disabled", NoOp )
+
+        voteButton =
+            a
+                [ class ("button " ++ voteButtonClass)
+                , onClick voteOp
+                , attribute voteAttr ""
+                ]
+                [ text voteButtonTxt ]
+    in
+        pageView model
+            [ titleMenu "Producers List" [ voteButton ]
+            , p [] [ text "Select the Block Producers you want to vote on the left first column. You can choose up to 30 Block Producers." ]
+            , producersList model.producers
+            , p [ class "has-text-centered has-margin-top" ] [ voteButton ]
+            ]
 
 
 enterPkView : Model -> Html Msg
