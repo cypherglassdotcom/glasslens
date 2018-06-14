@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Html exposing (Html, text, div, h1, img, p, a, nav, span)
+import Html exposing (Html, text, div, section, h1, img, p, a, nav, span)
 import Html.Attributes exposing (src, class, attribute)
 import Html.Events exposing (onClick)
 
@@ -121,8 +121,8 @@ view model =
 welcomeView : Model -> Html Msg
 welcomeView model =
     div [ class "welcome" ]
-        [ img [ src "/logo-cg.svg" ] []
-        , h1 [] [ text "Welcome to Cypherglass Voting Tool!" ]
+        [ img [ src "assets/logo-cg.svg" ] []
+        , p [] [ text "Welcome to Cypherglass Voting Tool!" ]
         , p [] [ text "This is a safe and easy tool to vote for EOS Block Producers" ]
         , a [ onClick StartVoting ] [ text "Start Voting Session" ]
         ]
@@ -132,7 +132,7 @@ pageView : Model -> List (Html msg) -> Html msg
 pageView model content =
     div []
         [ topMenu model
-        , div [ class "container" ] content
+        , section [ class "section" ] [ div [ class "container" ] content ]
         ]
 
 
@@ -144,7 +144,7 @@ topMenu model =
         , attribute "role" "navigation"
         ]
         [ div [ class "navbar-brand logo" ]
-            [ img [ class "logo-img", src "/logo_horizontal.svg" ] []
+            [ img [ class "logo-img", src "assets/logo_horizontal.svg" ] []
             , span [ class "title-span is-hidden-mobile" ] [ text "VOTING TOOL" ]
             , span [ class "title-span is-hidden-tablet" ] [ text "VT" ]
             ]
@@ -158,7 +158,7 @@ topMenu model =
 listBpsView : Model -> Html Msg
 listBpsView model =
     pageView model
-        [ h1 [] [ text "Producers List" ]
+        [ h1 [ class "title" ] [ text "Producers List" ]
         , p [] [ text "Please vote Wisely!" ]
         , a [ onClick ConfirmVote ] [ text "Confirm Vote" ]
         ]
@@ -167,7 +167,7 @@ listBpsView model =
 enterPkView : Model -> Html Msg
 enterPkView model =
     pageView model
-        [ h1 [] [ text "Enter your Private Key" ]
+        [ h1 [ class "title" ] [ text "Enter your Private Key" ]
         , p [] [ text "It's safer if you disconnect" ]
         , a [ onClick GenerateTransaction ] [ text "Confirm Voting Transaction" ]
         ]
@@ -176,7 +176,7 @@ enterPkView model =
 transactionView : Model -> Html Msg
 transactionView model =
     pageView model
-        [ h1 [] [ text "Review Vote" ]
+        [ h1 [ class "title" ] [ text "Review Vote" ]
         , p [] [ text "Confirm your Vote Transaction data:" ]
         , p [] [ text "A, B, C" ]
         , a [ onClick ConfirmTransaction ] [ text "Submit Vote" ]
@@ -186,7 +186,7 @@ transactionView model =
 successView : Model -> Html Msg
 successView model =
     pageView model
-        [ h1 [] [ text "Success" ]
+        [ h1 [ class "title" ] [ text "Success" ]
         , p [] [ text "Thanks for voting using Cypherglass Voting Tool!" ]
         , p [] [ text "Share voting in Twitter | Facebook" ]
         , a [ onClick StartVoting ] [ text "New Voting Session" ]

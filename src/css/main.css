@@ -257,7 +257,7 @@ html, body {
 
 .topcg.navbar {
   background-color: #23114f;
-  height: 120px;
+  height: 100px;
   align-items: stretch;
   display: flex; }
   .topcg.navbar .icon {
