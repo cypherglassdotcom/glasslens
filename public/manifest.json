@@ -1,6 +1,6 @@
 {
-  "short_name": "Elm App",
-  "name": "Create Elm App Sample",
+  "short_name": "Cypherglass Voting",
+  "name": "Cypherglass Voting App",
   "icons": [
     {
       "src": "favicon.ico",

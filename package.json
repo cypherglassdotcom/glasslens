@@ -1,0 +1,23 @@
+{
+  "name": "cypherglass-voting",
+  "version": "0.1.0",
+  "description": "Cypherglass VOTING Tool",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-css": "node-sass-chokidar --include-path ./src --include-path ./node_modules src/ -o src/",
+    "watch-css": "npm run build-css && node-sass-chokidar --include-path ./src --include-path ./node_modules src/ -o src/ --watch --recursive",
+    "postinstall": "elm-install",
+    "build": "elm-app build",
+    "start": "elm-app start"
+  },
+  "author": "Leo Ribeiro",
+  "license": "MIT",
+  "dependencies": {
+    "bulma": "^0.7.1",
+    "node-sass-chokidar": "^1.3.0"
+  }
+}
