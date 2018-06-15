@@ -2,7 +2,7 @@ module View exposing (..)
 
 import Model exposing (..)
 import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, passwordInput, fieldInput)
-import Html exposing (Html, div, img, p, text, a, button, section, span, nav, tr, td, table, thead, th, li, ul, h1, strong, br, small)
+import Html exposing (Html, div, img, p, text, a, button, section, span, nav, tr, td, table, thead, th, li, ul, h1, strong, br, small, pre)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
 
@@ -245,6 +245,15 @@ pkModal model =
                         ]
                     , a [ onClick AcceptOnlineConsent, class "has-text-danger" ] [ text "I understand the risks and I want to sign my vote online" ]
                     ]
+            else if model.transactionSignature /= Nothing then
+                div []
+                    [ strong [ class "has-text-success" ] [ text "Your transaction was signed and your Private Key was already destroyed from the session safely." ]
+                    , p [ class "has-margin-top" ]
+                        [ text "You can now stay "
+                        , strong [ class "has-text-success" ] [ text "ONLINE" ]
+                        , text ", close this modal and confirm your vote!"
+                        ]
+                    ]
             else
                 div [ class "has-margin-top" ]
                     [ passwordInput
@@ -264,6 +273,12 @@ pkModal model =
                         UpdatePkAccount
                         False
                     ]
+
+        submitButton =
+            if model.pk /= Nothing && model.pkAccount /= Nothing then
+                Just ( "Submit", SignWithPk )
+            else
+                Nothing
     in
         modalCard model.isLoading
             "Sign with Private Key"
@@ -274,8 +289,8 @@ pkModal model =
                 , pkForm
                 ]
             ]
-            Nothing
-            Nothing
+            submitButton
+            (Just ( "Close", TogglePkModal ))
 
 
 enterPkView : Model -> Html Msg
@@ -288,6 +303,44 @@ enterPkView model =
                         pkModal model
                     else
                         text ""
+
+                signatureContent =
+                    case model.transactionSignature of
+                        Just transaction ->
+                            div []
+                                [ div [ class "has-text-centered" ]
+                                    [ h1 [ class "title" ] [ text "Signed Transaction" ]
+                                    , p [] [ text ("Your voting transaction is prepared and will expire in " ++ (toString model.expirationCounter) ++ " seconds.") ]
+                                    , p [ class "has-margin-top" ]
+                                        [ a [ class "button is-success" ] [ text "Submit Vote" ] ]
+                                    , p [ class "has-margin-top" ]
+                                        [ a [ class "button is-danger", onClick ReInitialize ] [ text "Cancel and Restart" ] ]
+                                    ]
+                                ]
+
+                        Nothing ->
+                            div []
+                                [ div [ class "has-text-centered" ]
+                                    [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
+                                    , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
+                                    ]
+                                , div [ class "has-text-centered has-margin-top-2x" ]
+                                    [ small []
+                                        [ text "Hardware Wallets Coming Soon... "
+                                        , a [ target "_blank", href "https://steemit.com/eos/@cypherglass/usd100k-eos-hardware-wallet-bounty" ]
+                                            [ text "Learn More" ]
+                                        ]
+                                    , p [ class "has-margin-top" ]
+                                        [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
+                                    , p [ class "has-margin-top" ]
+                                        [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
+                                        ]
+                                    , p [ class "has-margin-top" ]
+                                        []
+                                    , p [ class "has-margin-top" ]
+                                        [ a [ class "button is-danger", onClick ReInitialize ] [ text "Cancel and Restart" ] ]
+                                    ]
+                                ]
             in
                 pageView model
                     [ (columns
@@ -303,23 +356,7 @@ enterPkView model =
                                 [ strong [] [ text "Selected Block Producers" ] ]
                             , selectedBpsList model.producers
                             ]
-                        , div []
-                            [ div [ class "has-text-centered" ]
-                                [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
-                                , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
-                                ]
-                            , div [ class "has-text-centered has-margin-top-2x" ]
-                                [ small [] [ text "Hardware Wallets Coming Soon..." ]
-                                , p [ class "has-margin-top" ] [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
-                                , p [ class "has-margin-top" ]
-                                    [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
-                                    ]
-                                , p [ class "has-margin-top" ]
-                                    [ a [ target "_blank", href "https://steemit.com/eos/@cypherglass/usd100k-eos-hardware-wallet-bounty" ]
-                                        [ text "Learn More..." ]
-                                    ]
-                                ]
-                            ]
+                        , signatureContent
                         ]
                       )
                     , modal

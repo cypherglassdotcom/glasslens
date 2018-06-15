@@ -51,6 +51,15 @@ port getBlockDataOk : (JD.Value -> msg) -> Sub msg
 port getBlockDataFail : (String -> msg) -> Sub msg
 
 
+port signTransaction : ( String, String, Int, Int, String, List String ) -> Cmd msg
+
+
+port signTransactionOk : (String -> msg) -> Sub msg
+
+
+port signTransactionFail : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
@@ -59,6 +68,8 @@ subscriptions model =
         , listProducersFail ListProducersFail
         , getBlockDataOk GetBlockDataOk
         , getBlockDataFail GetBlockDataFail
+        , signTransactionOk SignTransactionOk
+        , signTransactionFail SignTransactionFail
         , isNetworkOnline SetNetworkOnline
         ]
 
@@ -71,12 +82,27 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Tick time ->
-            ( { model
-                | currentTime = time
-                , notifications = updateNotifications model.notifications model.currentTime
-              }
-            , Cmd.none
-            )
+            let
+                expirationCounter =
+                    if model.expirationCounter > 0 then
+                        model.expirationCounter - 1
+                    else
+                        model.expirationCounter
+
+                transactionSignature =
+                    if expirationCounter > 0 then
+                        model.transactionSignature
+                    else
+                        Nothing
+            in
+                ( { model
+                    | currentTime = time
+                    , notifications = updateNotifications model.notifications model.currentTime
+                    , expirationCounter = expirationCounter
+                    , transactionSignature = transactionSignature
+                  }
+                , Cmd.none
+                )
 
         SetNetworkOnline isOnline ->
             ( { model | isNetworkConnected = isOnline, isOnlineConsent = False }, Cmd.none )
@@ -169,6 +195,50 @@ update msg model =
 
         AcceptOnlineConsent ->
             ( { model | isOnlineConsent = True, pk = Nothing, pkAccount = Nothing }, Cmd.none )
+
+        SignWithPk ->
+            let
+                selectedProducers =
+                    model.producers
+                        |> List.filter .selected
+                        |> List.map .account
+
+                ( newModel, cmd ) =
+                    case model.blockData of
+                        Just blockData ->
+                            case model.pk of
+                                Just pk ->
+                                    case model.pkAccount of
+                                        Just pkAccount ->
+                                            ( { model | isLoading = model.isLoading + 1 }, signTransaction ( pk, pkAccount, blockData.blockNum, blockData.refBlockPrefix, blockData.chainId, selectedProducers ) )
+
+                                        Nothing ->
+                                            addError model "invalidSignSubmission" "You must enter the Private Key Account to sign your voting transaction"
+
+                                Nothing ->
+                                    addError model "invalidSignSubmission" "You must enter the Private Key and Account Name to sign your voting transaction"
+
+                        Nothing ->
+                            addError model "invalidSignSubmission" "Cannot sign transaction with empty block data"
+            in
+                ( newModel, cmd )
+
+        SignTransactionOk signature ->
+            ( { model
+                | transactionSignature = Just signature
+                , pk = Nothing
+                , pkAccount = Nothing
+                , isLoading = model.isLoading - 1
+                , expirationCounter = defaultTransactionExpiration
+              }
+            , Cmd.none
+            )
+
+        SignTransactionFail err ->
+            addError model "signTransactionError" err
+
+        ReInitialize ->
+            ( { initialModel | isNetworkConnected = model.isNetworkConnected }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )

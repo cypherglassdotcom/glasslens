@@ -50,12 +50,14 @@ type alias Model =
     , pk : Maybe String
     , pkAccount : Maybe String
     , showPkModal : Bool
+    , transactionSignature : Maybe String
     , isLoading : Int
     , notifications : List Notification
     , currentTime : Time.Time
     , blockData : Maybe BlockData
     , isNetworkConnected : Bool
     , isOnlineConsent : Bool
+    , expirationCounter : Int
     }
 
 
@@ -66,18 +68,25 @@ initialModel =
     , pk = Nothing
     , pkAccount = Nothing
     , showPkModal = False
+    , transactionSignature = Nothing
     , isLoading = 0
     , notifications = []
     , currentTime = 0
     , blockData = Nothing
     , isNetworkConnected = False
     , isOnlineConsent = False
+    , expirationCounter = 0
     }
 
 
 cypherglassBpAccount : String
 cypherglassBpAccount =
     "cypherglasss"
+
+
+defaultTransactionExpiration : Int
+defaultTransactionExpiration =
+    600
 
 
 
@@ -101,4 +110,8 @@ type Msg
     | AcceptOnlineConsent
     | UpdatePk String
     | UpdatePkAccount String
+    | SignWithPk
+    | SignTransactionOk String
+    | SignTransactionFail String
+    | ReInitialize
     | NoOp

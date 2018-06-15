@@ -8,6 +8,7 @@ const PRODUCERS_SCOPE = 'eosio';
 const PRODUCERS_TABLE = 'producers';
 const PRODUCERS_GLOBAL_TABLE = 'global';
 const PRODUCERS_LIMIT = 5000;
+const VOTE_TRANSACTION_EXPIRE_SECS = 600;
 
 const eos = Eos({httpEndpoint: API_URL});
 
@@ -34,8 +35,6 @@ app.ports.listProducers.subscribe(async () => {
 
   if (producersList && producersList.rows) {
     app.ports.listProducersOk.send(producersList.rows);
-  } else {
-    app.ports.listProducersFail.send("Empty Producers List");
   }
 });
 
@@ -67,12 +66,77 @@ app.ports.getBlockData.subscribe(async () => {
         block_num: lib.block_num,
         ref_block_prefix: lib.ref_block_prefix
       });
-    } else {
-      app.ports.getBlockDataFail.send("Empty Last Irreversible Block Data");
     }
-  } else {
-    app.ports.getBlockDataFail.send("Empty Chain Info Data");
   }
+});
+
+/**
+ * Transaction Signer
+ */
+app.ports.signTransaction.subscribe(async (params) => {
+  let [ pk, pkAccount, blockNum, refBlockPrefix, chainId, producers ] = params;
+
+  const expiration = new Date(new Date().getTime() + VOTE_TRANSACTION_EXPIRE_SECS * 1000).toISOString().split('.')[0];
+
+  const refBlockNum = blockNum & 0xFFFF;
+
+  const headers = {
+    ref_block_num: refBlockNum,
+    ref_block_prefix: refBlockPrefix,
+    net_usage_words: 0,
+    max_cpu_usage_ms: 0,
+    delay_sec: 0,
+    expiration
+  }
+
+  let eos = Eos({
+    keyProvider: pk,
+    transactionHeaders: (_, cb) => {
+      cb(null, headers);
+    },
+    broadcast: false,
+    sign: true,
+    chainId: chainId
+  });
+
+  const options = {
+    broadcast: false,
+    sign: true,
+    authorization: pkAccount
+  }
+
+  const transaction = await eos.transaction(tr => {
+    tr.voteproducer({
+      voter: pkAccount,
+      proxy: '',
+      producers
+    });
+  }, options).catch(err => {
+    console.error(err);
+
+    let errorMsg = 'Fail to Sign Transaction, please make sure you entered a correct Private Key and Account Name';
+
+    if (err && err.message &&
+      err.message.indexOf('permission_level.actor') >= 0) {
+      errorMsg = `Invalid account name ${pkAccount}`;
+    } else if (err && err.name === 'AssertionError' &&
+      err.message === 'Invalid public key') {
+      errorMsg = 'Incorrect Private Key, could not find Matching Public Key';
+    } else if (err && err.name === 'AssertionError' &&
+      err.message) {
+      errorMsg = err.message;
+    }
+
+    app.ports.signTransactionFail.send(errorMsg);
+  });
+
+  if (transaction) {
+    const transactionJson = JSON.stringify(transaction.transaction, null, 2);
+    app.ports.signTransactionOk.send(transactionJson);
+  }
+
+  // force cleaning
+  params = pk = eos = null;
 });
 
 /**
