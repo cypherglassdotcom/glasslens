@@ -262,6 +262,14 @@ html, body {
   height: 100px;
   align-items: stretch;
   display: flex; }
+  .topcg.navbar .is-active {
+    background-color: #23114f; }
+  .topcg.navbar .network-status {
+    margin: 36px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    float: right; }
   .topcg.navbar .icon {
     margin-right: 2px; }
   .topcg.navbar .navbar-item {

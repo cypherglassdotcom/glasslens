@@ -75,4 +75,20 @@ app.ports.getBlockData.subscribe(async () => {
   }
 });
 
+/**
+ * Listener for Online/Offline Network Connection
+ */
+window.addEventListener('load', () => {
+
+  const updateOnlineStatus = () => {
+    const isConnected = navigator.onLine
+    app.ports.isNetworkOnline.send(isConnected)
+  };
+
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+
+  updateOnlineStatus();
+});
+
 registerServiceWorker();

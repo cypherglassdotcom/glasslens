@@ -39,6 +39,9 @@ port listProducersOk : (JD.Value -> msg) -> Sub msg
 port listProducersFail : (String -> msg) -> Sub msg
 
 
+port isNetworkOnline : (Bool -> msg) -> Sub msg
+
+
 port getBlockData : () -> Cmd msg
 
 
@@ -56,6 +59,7 @@ subscriptions model =
         , listProducersFail ListProducersFail
         , getBlockDataOk GetBlockDataOk
         , getBlockDataFail GetBlockDataFail
+        , isNetworkOnline SetNetworkOnline
         ]
 
 
@@ -112,6 +116,7 @@ type alias Model =
     , notifications : List Notification
     , currentTime : Time.Time
     , blockData : Maybe BlockData
+    , isNetworkConnected : Bool
     }
 
 
@@ -125,6 +130,7 @@ initialModel =
     , notifications = []
     , currentTime = 0
     , blockData = Nothing
+    , isNetworkConnected = False
     }
 
 
@@ -150,6 +156,7 @@ type Msg
     | GetBlockDataFail String
     | ToggleBpSelection String
     | TogglePkModal
+    | SetNetworkOnline Bool
     | NoOp
 
 
@@ -163,6 +170,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        SetNetworkOnline isOnline ->
+            ( { model | isNetworkConnected = isOnline }, Cmd.none )
 
         StartVoting ->
             ( { model
@@ -450,6 +460,18 @@ loadingIcon =
 topMenu : Model -> Html msg
 topMenu model =
     let
+        ( networkStatusTxt, networkStatusClass, networkStatusIcon ) =
+            if model.isNetworkConnected then
+                ( "ONLINE", "has-text-success", "circle" )
+            else
+                ( "OFFLINE", "has-text-danger", "power-off" )
+
+        networkSpan =
+            span [ class (networkStatusClass ++ " network-status") ]
+                [ text networkStatusTxt
+                , icon networkStatusIcon False False
+                ]
+
         isLoadingSpan =
             if model.isLoading > 0 then
                 span [ class "loading-msg" ]
@@ -470,8 +492,8 @@ topMenu model =
                 , span [ class "title-span is-hidden-tablet" ] [ text "LENS" ]
                 , isLoadingSpan
                 ]
-            , div [ class "navbar-menu" ]
-                [ div [ class "navbar-end" ] [ text "" ]
+            , div [ class "navbar-menu is-active" ]
+                [ div [ class "navbar-end" ] [ networkSpan ]
                 ]
             ]
 
@@ -549,6 +571,7 @@ titleMenu title menu =
         ]
 
 
+selectedBpsList : List Producer -> Html msg
 selectedBpsList producers =
     let
         items =

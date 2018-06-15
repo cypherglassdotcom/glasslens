@@ -36,6 +36,18 @@ html, body {
   align-items: stretch;
   display: flex;
 
+  .is-active {
+    background-color: $cg-color;
+  }
+
+  .network-status {
+    margin: 36px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    float: right;
+  }
+
   .icon {
     margin-right: 2px;
   }
