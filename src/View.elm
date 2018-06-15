@@ -1,7 +1,7 @@
 module View exposing (..)
 
 import Model exposing (..)
-import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, passwordInput, fieldInput)
+import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, passwordInput, fieldInput, disabledAttribute)
 import Html exposing (Html, div, img, p, text, a, button, section, span, nav, tr, td, table, thead, th, li, ul, h1, strong, br, small, pre)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
@@ -18,9 +18,6 @@ view model =
 
         EnterPk ->
             enterPkView model
-
-        TransactionConfirmation ->
-            transactionView model
 
         SuccessFinal ->
             successView model
@@ -139,7 +136,6 @@ producerRow producer =
             [ td [] [ checker ]
             , td [] [ text producer.account ]
             , td [] [ bpLink ]
-            , td [] [ text (toString producer.totalVotes) ]
             ]
 
 
@@ -153,7 +149,7 @@ producersList producers =
             else
                 [ tr []
                     [ td
-                        [ colspan 4, class "has-text-centered" ]
+                        [ colspan 3, class "has-text-centered" ]
                         [ text "Producers not loaded" ]
                     ]
                 ]
@@ -164,7 +160,6 @@ producersList producers =
                     [ th [] [ text "" ]
                     , th [] [ text "Producer" ]
                     , th [] [ text "Website" ]
-                    , th [] [ text "Vote Stats" ]
                     ]
                     :: producersRows
                 )
@@ -312,9 +307,9 @@ enterPkView model =
                                     [ h1 [ class "title" ] [ text "Signed Transaction" ]
                                     , p [] [ text ("Your voting transaction is prepared and will expire in " ++ (toString model.expirationCounter) ++ " seconds.") ]
                                     , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-success" ] [ text "Submit Vote" ] ]
+                                        [ a [ class "button is-success", disabledAttribute (model.isLoading > 0), onClick PushTransaction ] [ text "Submit Vote" ] ]
                                     , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-danger", onClick ReInitialize ] [ text "Cancel and Restart" ] ]
+                                        [ a [ class "button is-danger", disabledAttribute (model.isLoading > 0), onClick ReInitialize ] [ text "Cancel and Restart" ] ]
                                     ]
                                 ]
 
@@ -382,21 +377,45 @@ enterPkView model =
                     ]
 
 
-transactionView : Model -> Html Msg
-transactionView model =
-    pageView model
-        [ h1 [ class "title" ] [ text "Review Vote" ]
-        , p [] [ text "Confirm your Vote Transaction data:" ]
-        , p [] [ text "A, B, C" ]
-        , a [ onClick ConfirmTransaction ] [ text "Submit Vote" ]
-        ]
-
-
 successView : Model -> Html Msg
 successView model =
-    pageView model
-        [ h1 [ class "title" ] [ text "Success" ]
-        , p [] [ text "Thanks for voting using Cypherglass Voting Tool!" ]
-        , p [] [ text "Share voting in Twitter | Facebook" ]
-        , a [ onClick StartVoting ] [ text "New Voting Session" ]
-        ]
+    let
+        producers =
+            model.producers
+                |> List.filter .selected
+                |> List.map .account
+                |> String.join " "
+    in
+        pageView model
+            [ div [ class "has-text-centered" ]
+                [ h1 [ class "title" ] [ text "Thanks for Voting with Cypherglass Lens!" ]
+                , p [] [ text "You successfully voted for: ", pre [] [ text producers ] ]
+                , p [ class "has-margin-top" ]
+                    [ text "Your Transaction Id is "
+                    , strong [] [ text model.transactionId ]
+                    , text " - "
+                    , a [ href ("https://eosflare.io/tx/" ++ model.transactionId), target "_blank" ]
+                        [ text "Check it here!" ]
+                    ]
+                , p [ class "has-margin-top" ]
+                    [ text "Spread your "
+                    , strong [] [ text "AMAZING EOS Civic Duty" ]
+                    , text " to World!"
+                    ]
+                , p [ class "has-margin-top" ]
+                    [ a [ href "https://twitter.com", target "_blank", class "button is-info" ]
+                        [ span [ class "icon" ] [ icon "twitter" False False ]
+                        , span [] [ text "Share on Twitter" ]
+                        ]
+                    , span [] [ text " " ]
+                    , a [ href "https://facebook.com", target "_blank", class "button is-link" ]
+                        [ span [ class "icon" ] [ icon "facebook" False False ]
+                        , span [] [ text "Share on Facebook" ]
+                        ]
+                    ]
+                , p [ class "has-margin-top-2x" ]
+                    [ p [] [ text "Do you have more accounts to vote?" ]
+                    , a [ class "has-margin-top button is-primary", onClick StartVoting ] [ text "New Voting Session" ]
+                    ]
+                ]
+            ]

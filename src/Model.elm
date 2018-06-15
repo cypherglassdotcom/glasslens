@@ -8,7 +8,6 @@ type Step
     = Welcome
     | ListBps
     | EnterPk
-    | TransactionConfirmation
     | SuccessFinal
 
 
@@ -58,6 +57,7 @@ type alias Model =
     , isNetworkConnected : Bool
     , isOnlineConsent : Bool
     , expirationCounter : Int
+    , transactionId : String
     }
 
 
@@ -76,6 +76,7 @@ initialModel =
     , isNetworkConnected = False
     , isOnlineConsent = False
     , expirationCounter = 0
+    , transactionId = ""
     }
 
 
@@ -96,7 +97,6 @@ defaultTransactionExpiration =
 type Msg
     = StartVoting
     | ConfirmVote
-    | GenerateTransaction
     | ConfirmTransaction
     | Tick Time.Time
     | DeleteNotification String
@@ -113,5 +113,8 @@ type Msg
     | SignWithPk
     | SignTransactionOk String
     | SignTransactionFail String
+    | PushTransaction
+    | PushTransactionOk String
+    | PushTransactionFail String
     | ReInitialize
     | NoOp

@@ -60,6 +60,15 @@ port signTransactionOk : (String -> msg) -> Sub msg
 port signTransactionFail : (String -> msg) -> Sub msg
 
 
+port pushTransaction : String -> Cmd msg
+
+
+port pushTransactionOk : (String -> msg) -> Sub msg
+
+
+port pushTransactionFail : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
@@ -71,6 +80,8 @@ subscriptions model =
         , signTransactionOk SignTransactionOk
         , signTransactionFail SignTransactionFail
         , isNetworkOnline SetNetworkOnline
+        , pushTransactionOk PushTransactionOk
+        , pushTransactionFail PushTransactionFail
         ]
 
 
@@ -119,9 +130,6 @@ update msg model =
 
         ConfirmVote ->
             ( { model | step = EnterPk, isLoading = model.isLoading + 1 }, getBlockData () )
-
-        GenerateTransaction ->
-            ( { model | step = TransactionConfirmation }, Cmd.none )
 
         ConfirmTransaction ->
             ( { model | step = SuccessFinal }, Cmd.none )
@@ -202,6 +210,7 @@ update msg model =
                     model.producers
                         |> List.filter .selected
                         |> List.map .account
+                        |> List.sort
 
                 ( newModel, cmd ) =
                     case model.blockData of
@@ -236,6 +245,26 @@ update msg model =
 
         SignTransactionFail err ->
             addError model "signTransactionError" err
+
+        PushTransaction ->
+            case model.transactionSignature of
+                Just transactionSignature ->
+                    ( { model | isLoading = model.isLoading + 1 }, pushTransaction transactionSignature )
+
+                Nothing ->
+                    addError model "pushTransactionError" "Transaction is not signed, please restart your voting session."
+
+        PushTransactionOk transactionId ->
+            ( { model
+                | step = SuccessFinal
+                , transactionId = transactionId
+                , isLoading = model.isLoading - 1
+              }
+            , Cmd.none
+            )
+
+        PushTransactionFail err ->
+            addError model "pushTransactionError" err
 
         ReInitialize ->
             ( { initialModel | isNetworkConnected = model.isNetworkConnected }, Cmd.none )

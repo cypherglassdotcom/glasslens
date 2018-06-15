@@ -2,7 +2,8 @@ import './css/main.css';
 import { Main } from './Main.elm';
 import registerServiceWorker from './registerServiceWorker';
 
-const API_URL = 'https://api.cypherglass.com';
+//const API_URL = 'https://api.cypherglass.com';
+const API_URL = 'http://199.27.232.138:8888';
 const PRODUCERS_ACCOUNT = 'eosio';
 const PRODUCERS_SCOPE = 'eosio';
 const PRODUCERS_TABLE = 'producers';
@@ -18,9 +19,6 @@ const app = Main.embed(document.getElementById('root'));
  * List the producers
  */
 app.ports.listProducers.subscribe(async () => {
-
-  // todo: call global and get fields
-  // total_producer_vote_weight and total_activated_stake
 
   const producersList = await eos.getTableRows({
     "json": true,
@@ -137,6 +135,57 @@ app.ports.signTransaction.subscribe(async (params) => {
 
   // force cleaning
   params = pk = eos = null;
+});
+
+/**
+ * Push Transaction
+ */
+app.ports.pushTransaction.subscribe(async(transactionJson) => {
+  const transaction = JSON.parse(transactionJson);
+
+  const transactionResult = await Eos({httpEndpoint: API_URL, broadcast: true})
+    .pushTransaction(transaction)
+    .catch(err => {
+      console.error(err);
+
+      let errorMsg = 'Fail to Submit Transaction';
+
+      if (err && err.name === 'AssertionError' &&
+        err.message) {
+        errorMsg = err.message;
+      } else if (err && err.message) {
+        try {
+          const response = JSON.parse(err.message);
+
+          if (response && response.error && response.error.details && response.error.details.length) {
+
+            const message = response.error.details[0].message;
+
+            if (message.indexOf('authorizing actor') > 0 && message.indexOf('does not exist')) {
+              errorMsg += ' - Entered account name does not exist, please restart the process and make sure you enter the correct account name for the provided key.';
+            } else if (message.indexOf('transaction declares authority') >= 0 &&
+            message.indexOf('does not have signatures') > 0) {
+              errorMsg += ' - Provided key has no authorization to sign for account entered. Please restart the process and make sure you enter the correct key for account entered.';
+            } else {
+              errorMsg += ' - ' + (response.error.details[0].message || 'Unknown Details');
+            }
+          } else if (response && response.error) {
+            errorMsg += ' - Error Code: ' + response.error.code;
+          } else {
+            errorMsg += ' - Uknown EOS Error';
+          }
+
+        } catch(_) {
+          errorMsg += ' - Unknown Reason'
+        }
+      }
+
+      app.ports.pushTransactionFail.send(errorMsg);
+    });
+
+  if (transactionResult) {
+    app.ports.pushTransactionOk.send(transactionResult.transaction_id);
+  }
 });
 
 /**
