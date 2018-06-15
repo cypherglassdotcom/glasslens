@@ -1,6 +1,6 @@
 port module Main exposing (..)
 
-import Html exposing (Html, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td)
+import Html exposing (Html, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
 import Json.Decode as JD
@@ -39,12 +39,23 @@ port listProducersOk : (JD.Value -> msg) -> Sub msg
 port listProducersFail : (String -> msg) -> Sub msg
 
 
+port getBlockData : () -> Cmd msg
+
+
+port getBlockDataOk : (JD.Value -> msg) -> Sub msg
+
+
+port getBlockDataFail : (String -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Time.every Time.second Tick
         , listProducersOk ListProducersOk
         , listProducersFail ListProducersFail
+        , getBlockDataOk GetBlockDataOk
+        , getBlockDataFail GetBlockDataFail
         ]
 
 
@@ -85,13 +96,22 @@ type alias Notification =
     }
 
 
+type alias BlockData =
+    { chainId : String
+    , blockNum : Int
+    , refBlockPrefix : Int
+    }
+
+
 type alias Model =
     { producers : List Producer
     , step : Step
     , pk : Maybe String
+    , showPkModal : Bool
     , isLoading : Int
     , notifications : List Notification
     , currentTime : Time.Time
+    , blockData : Maybe BlockData
     }
 
 
@@ -100,9 +120,11 @@ initialModel =
     { producers = []
     , step = Welcome
     , pk = Nothing
+    , showPkModal = False
     , isLoading = 0
     , notifications = []
     , currentTime = 0
+    , blockData = Nothing
     }
 
 
@@ -124,7 +146,10 @@ type Msg
     | DeleteNotification String
     | ListProducersOk JD.Value
     | ListProducersFail String
+    | GetBlockDataOk JD.Value
+    | GetBlockDataFail String
     | ToggleBpSelection String
+    | TogglePkModal
     | NoOp
 
 
@@ -149,7 +174,7 @@ update msg model =
             )
 
         ConfirmVote ->
-            ( { model | step = EnterPk }, Cmd.none )
+            ( { model | step = EnterPk, isLoading = model.isLoading + 1 }, getBlockData () )
 
         GenerateTransaction ->
             ( { model | step = TransactionConfirmation }, Cmd.none )
@@ -188,8 +213,24 @@ update msg model =
                 Err err ->
                     addError model "listProducersFailParse" err
 
+        GetBlockDataOk rawBlockData ->
+            case (JD.decodeValue blockDataDecoder rawBlockData) of
+                Ok blockData ->
+                    ( { model
+                        | blockData = Just blockData
+                        , isLoading = model.isLoading - 1
+                      }
+                    , Cmd.none
+                    )
+
+                Err err ->
+                    addError model "getBlockDataParseFail" err
+
         ListProducersFail err ->
             addError model "listProducersFail" err
+
+        GetBlockDataFail err ->
+            addError model "getBlockDataFail" err
 
         DeleteNotification id ->
             let
@@ -198,6 +239,9 @@ update msg model =
                         |> List.filter (\notification -> notification.id /= id)
             in
                 ( { model | notifications = notifications }, Cmd.none )
+
+        TogglePkModal ->
+            ( { model | showPkModal = not model.showPkModal }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -295,6 +339,14 @@ producerDecoder =
         |> JDP.hardcoded False
 
 
+blockDataDecoder : JD.Decoder BlockData
+blockDataDecoder =
+    JDP.decode BlockData
+        |> JDP.required "chain_id" JD.string
+        |> JDP.required "block_num" JD.int
+        |> JDP.required "ref_block_prefix" JD.int
+
+
 
 ---- VIEW ----
 
@@ -322,7 +374,7 @@ welcomeView : Model -> Html Msg
 welcomeView model =
     div [ class "welcome" ]
         [ img [ src "assets/logo-cg.svg" ] []
-        , p [ class "has-margin-top logo" ] [ text "VOTING" ]
+        , p [ class "has-margin-top logo" ] [ text "LENS" ]
         , p [ class "has-margin-top" ] [ text "The safer and easiest way to vote for EOS Block Producers" ]
         , a [ class "button is-info has-margin-top", onClick StartVoting ] [ text "Start Voting Session" ]
         ]
@@ -414,8 +466,8 @@ topMenu model =
             ]
             [ div [ class "navbar-brand logo" ]
                 [ img [ class "logo-img", src "assets/logo_horizontal.svg" ] []
-                , span [ class "title-span is-hidden-mobile" ] [ text "VOTING" ]
-                , span [ class "title-span is-hidden-tablet" ] [ text "VT" ]
+                , span [ class "title-span is-hidden-mobile" ] [ text "LENS" ]
+                , span [ class "title-span is-hidden-tablet" ] [ text "LENS" ]
                 , isLoadingSpan
                 ]
             , div [ class "navbar-menu" ]
@@ -497,6 +549,19 @@ titleMenu title menu =
         ]
 
 
+selectedBpsList producers =
+    let
+        items =
+            producers
+                |> List.filter (\p -> p.selected)
+                |> List.map
+                    (\p ->
+                        li [] [ text p.account ]
+                    )
+    in
+        ul [] items
+
+
 listBpsView : Model -> Html Msg
 listBpsView model =
     let
@@ -544,13 +609,74 @@ listBpsView model =
             ]
 
 
+columns : Bool -> List (Html Msg) -> Html Msg
+columns isMultiline cols =
+    let
+        mlClass =
+            if isMultiline then
+                " is-multiline"
+            else
+                ""
+    in
+        div [ class ("columns" ++ mlClass) ]
+            (cols
+                |> List.map (\item -> div [ class "column" ] [ item ])
+            )
+
+
 enterPkView : Model -> Html Msg
 enterPkView model =
-    pageView model
-        [ h1 [ class "title" ] [ text "Enter your Private Key" ]
-        , p [] [ text "It's safer if you disconnect" ]
-        , a [ onClick GenerateTransaction ] [ text "Confirm Voting Transaction" ]
-        ]
+    case model.blockData of
+        Just blockData ->
+            pageView model
+                [ (columns
+                    False
+                    [ div []
+                        [ h1 [ class "title" ] [ text "Block Data" ]
+                        , p []
+                            [ strong [] [ text "Current Block:" ]
+                            , span [] [ text (toString blockData.blockNum) ]
+                            , br [] []
+                            ]
+                        , p [ class "has-margin-top" ]
+                            [ strong [] [ text "Selected Block Producers" ] ]
+                        , selectedBpsList model.producers
+                        ]
+                    , div []
+                        [ div [ class "has-text-centered" ]
+                            [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
+                            , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
+                            ]
+                        , div [ class "has-text-centered has-margin-top-2x" ]
+                            [ small [] [ text "Hardware Wallets Coming Soon..." ]
+                            , p [ class "has-margin-top" ] [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
+                            , p [ class "has-margin-top" ]
+                                [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
+                                ]
+                            ]
+                        ]
+                    ]
+                  )
+                ]
+
+        Nothing ->
+            if model.isLoading > 0 then
+                pageView model
+                    [ p [ class "has-text-centered has-margin-top" ]
+                        [ loadingIcon
+                        , span [] [ text " Loading..." ]
+                        ]
+                    ]
+            else
+                pageView model
+                    [ div [ class "has-text-centered has-margin-top" ]
+                        [ p [] [ text "Fail to Load EOS Blockchain Data" ]
+                        , a [ class "button has-margin-top", onClick ConfirmVote ]
+                            [ icon "refresh" False False
+                            , span [] [ text "Retry" ]
+                            ]
+                        ]
+                    ]
 
 
 transactionView : Model -> Html Msg
