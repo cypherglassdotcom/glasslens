@@ -1,6 +1,6 @@
 port module Main exposing (..)
 
-import Html exposing (Html, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li)
+import Html exposing (Html, Attribute, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li, header, footer)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
 import Json.Decode as JD
@@ -117,6 +117,7 @@ type alias Model =
     , currentTime : Time.Time
     , blockData : Maybe BlockData
     , isNetworkConnected : Bool
+    , isOnlineConsent : Bool
     }
 
 
@@ -131,6 +132,7 @@ initialModel =
     , currentTime = 0
     , blockData = Nothing
     , isNetworkConnected = False
+    , isOnlineConsent = False
     }
 
 
@@ -157,6 +159,7 @@ type Msg
     | ToggleBpSelection String
     | TogglePkModal
     | SetNetworkOnline Bool
+    | AcceptOnlineConsent
     | NoOp
 
 
@@ -172,7 +175,7 @@ update msg model =
             )
 
         SetNetworkOnline isOnline ->
-            ( { model | isNetworkConnected = isOnline }, Cmd.none )
+            ( { model | isNetworkConnected = isOnline, isOnlineConsent = False }, Cmd.none )
 
         StartVoting ->
             ( { model
@@ -251,7 +254,10 @@ update msg model =
                 ( { model | notifications = notifications }, Cmd.none )
 
         TogglePkModal ->
-            ( { model | showPkModal = not model.showPkModal }, Cmd.none )
+            ( { model | showPkModal = not model.showPkModal, isOnlineConsent = False, pk = Nothing }, Cmd.none )
+
+        AcceptOnlineConsent ->
+            ( { model | isOnlineConsent = True, pk = Nothing }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -498,9 +504,70 @@ topMenu model =
             ]
 
 
+disabledAttribute : Bool -> Attribute msg
+disabledAttribute isDisabled =
+    if isDisabled then
+        attribute "disabled" "true"
+    else
+        attribute "data-empty" ""
 
--- eosnewyorkio	https://bp.eosnewyork.io	130,418,350,542,964,670
--- eoscanadacom	https://www.eoscanada.com	123,929,333,890,318,540
+
+modalCard : Int -> String -> msg -> List (Html msg) -> Maybe ( String, msg ) -> Maybe ( String, msg ) -> Html msg
+modalCard isLoading title close body ok cancel =
+    let
+        loadingClass =
+            if isLoading > 0 then
+                " is-loading"
+            else
+                ""
+
+        okButton =
+            case ok of
+                Just ( txt, msg ) ->
+                    button
+                        [ class ("button is-success" ++ loadingClass)
+                        , onClick msg
+                        , disabledAttribute (isLoading > 0)
+                        ]
+                        [ text txt ]
+
+                Nothing ->
+                    text ""
+
+        cancelButton =
+            case cancel of
+                Just ( txt, msg ) ->
+                    button
+                        [ class ("button is-light" ++ loadingClass)
+                        , onClick msg
+                        , disabledAttribute (isLoading > 0)
+                        ]
+                        [ text txt ]
+
+                Nothing ->
+                    text ""
+    in
+        div [ class "modal is-active" ]
+            [ div [ class "modal-background" ] []
+            , div [ class "modal-card" ]
+                [ header [ class "modal-card-head" ]
+                    [ p [ class "modal-card-title" ]
+                        [ text title ]
+                    , button
+                        [ class "delete"
+                        , attribute "aria-label" "close"
+                        , onClick close
+                        ]
+                        []
+                    ]
+                , section [ class "modal-card-body" ]
+                    body
+                , footer [ class "modal-card-foot" ]
+                    [ okButton
+                    , cancelButton
+                    ]
+                ]
+            ]
 
 
 producerRow : Producer -> Html Msg
@@ -647,40 +714,76 @@ columns isMultiline cols =
             )
 
 
+pkModal model =
+    let
+        pkForm =
+            if model.isNetworkConnected && not model.isOnlineConsent then
+                div []
+                    [ p []
+                        [ text "We detected that you are "
+                        , span [ class "has-text-success" ] [ text " ONLINE" ]
+                        , text ". We highly recommend you to go offline before entering your private key and signing the transaction."
+                        ]
+                    , a [ onClick AcceptOnlineConsent, class "has-text-danger" ] [ text "I understand the risks and I want to sign my vote online" ]
+                    ]
+            else
+                div [] [ p [] [ text "Enter your Private Key: ____" ] ]
+    in
+        modalCard model.isLoading
+            "Sign with Private Key"
+            TogglePkModal
+            [ div [ class "content" ]
+                [ p [] [ text "Enter the Private Key in any Application is a delicated action and it deserves the maximum possible care." ]
+                , p [] [ text "Please understand that right after we prepare your voting transaction, we destroy your private key and we never save it anywhere." ]
+                , pkForm
+                ]
+            ]
+            Nothing
+            Nothing
+
+
 enterPkView : Model -> Html Msg
 enterPkView model =
     case model.blockData of
         Just blockData ->
-            pageView model
-                [ (columns
-                    False
-                    [ div []
-                        [ h1 [ class "title" ] [ text "Block Data" ]
-                        , p []
-                            [ strong [] [ text "Current Block:" ]
-                            , span [] [ text (toString blockData.blockNum) ]
-                            , br [] []
-                            ]
-                        , p [ class "has-margin-top" ]
-                            [ strong [] [ text "Selected Block Producers" ] ]
-                        , selectedBpsList model.producers
-                        ]
-                    , div []
-                        [ div [ class "has-text-centered" ]
-                            [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
-                            , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
-                            ]
-                        , div [ class "has-text-centered has-margin-top-2x" ]
-                            [ small [] [ text "Hardware Wallets Coming Soon..." ]
-                            , p [ class "has-margin-top" ] [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
+            let
+                modal =
+                    if model.showPkModal then
+                        pkModal model
+                    else
+                        text ""
+            in
+                pageView model
+                    [ (columns
+                        False
+                        [ div []
+                            [ h1 [ class "title" ] [ text "Block Data" ]
+                            , p []
+                                [ strong [] [ text "Current Block:" ]
+                                , span [] [ text (toString blockData.blockNum) ]
+                                , br [] []
+                                ]
                             , p [ class "has-margin-top" ]
-                                [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
+                                [ strong [] [ text "Selected Block Producers" ] ]
+                            , selectedBpsList model.producers
+                            ]
+                        , div []
+                            [ div [ class "has-text-centered" ]
+                                [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
+                                , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
+                                ]
+                            , div [ class "has-text-centered has-margin-top-2x" ]
+                                [ small [] [ text "Hardware Wallets Coming Soon..." ]
+                                , p [ class "has-margin-top" ] [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
+                                , p [ class "has-margin-top" ]
+                                    [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
+                                    ]
                                 ]
                             ]
                         ]
+                      )
+                    , modal
                     ]
-                  )
-                ]
 
         Nothing ->
             if model.isLoading > 0 then
