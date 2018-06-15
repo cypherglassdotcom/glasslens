@@ -714,6 +714,7 @@ columns isMultiline cols =
             )
 
 
+pkModal : Model -> Html Msg
 pkModal model =
     let
         pkForm =
@@ -777,6 +778,10 @@ enterPkView model =
                                 , p [ class "has-margin-top" ] [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
                                 , p [ class "has-margin-top" ]
                                     [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
+                                    ]
+                                , p [ class "has-margin-top" ]
+                                    [ a [ target "_blank", href "https://steemit.com/eos/@cypherglass/usd100k-eos-hardware-wallet-bounty" ]
+                                        [ text "Learn More..." ]
                                     ]
                                 ]
                             ]
