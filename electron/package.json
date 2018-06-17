@@ -9,13 +9,10 @@
   "author": "Leo Ribeiro",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^2.0.2"
+    "electron": "2.0.2"
   },
-  "build": {
-     "appId": "com.cypherglass.lens",
-     "productName": "Cypherglass LENS",
-     "copyright": "Copyright © 2018 Cypherglass",
-     "buildResources": "./builder",
-     "output": "./dist"
+  "productName": "Cypherglass LENS",
+  "dependencies": {
+    "open": "0.0.5"
   }
 }

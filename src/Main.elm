@@ -247,12 +247,15 @@ update msg model =
             addError model "signTransactionError" err
 
         PushTransaction ->
-            case model.transactionSignature of
-                Just transactionSignature ->
-                    ( { model | isLoading = model.isLoading + 1 }, pushTransaction transactionSignature )
+            if model.isNetworkConnected then
+                case model.transactionSignature of
+                    Just transactionSignature ->
+                        ( { model | isLoading = model.isLoading + 1 }, pushTransaction transactionSignature )
 
-                Nothing ->
-                    addError model "pushTransactionError" "Transaction is not signed, please restart your voting session."
+                    Nothing ->
+                        addError model "pushTransactionError" "Transaction is not signed, please restart your voting session."
+            else
+                addError model "pushTransactionOffline" "Ooops... You are still offline, please wait for your status to be ONLINE and then submit the transaction again"
 
         PushTransactionOk transactionId ->
             ( { model

@@ -231,7 +231,16 @@ pkModal : Model -> Html Msg
 pkModal model =
     let
         pkForm =
-            if model.isNetworkConnected && not model.isOnlineConsent then
+            if model.transactionSignature /= Nothing then
+                div []
+                    [ strong [ class "has-text-success" ] [ text "Your transaction was signed and your Private Key was already destroyed from the session safely." ]
+                    , p [ class "has-margin-top" ]
+                        [ text "You can now go "
+                        , strong [ class "has-text-success" ] [ text "ONLINE" ]
+                        , text ", close this modal and confirm your vote!"
+                        ]
+                    ]
+            else if model.isNetworkConnected && not model.isOnlineConsent then
                 div []
                     [ p []
                         [ text "We detected that you are "
@@ -239,15 +248,6 @@ pkModal model =
                         , text ". We highly recommend you to go offline before entering your private key and signing the transaction."
                         ]
                     , a [ onClick AcceptOnlineConsent, class "has-text-danger" ] [ text "I understand the risks and I want to sign my vote online" ]
-                    ]
-            else if model.transactionSignature /= Nothing then
-                div []
-                    [ strong [ class "has-text-success" ] [ text "Your transaction was signed and your Private Key was already destroyed from the session safely." ]
-                    , p [ class "has-margin-top" ]
-                        [ text "You can now stay "
-                        , strong [ class "has-text-success" ] [ text "ONLINE" ]
-                        , text ", close this modal and confirm your vote!"
-                        ]
                     ]
             else
                 div [ class "has-margin-top" ]
@@ -385,6 +385,18 @@ successView model =
                 |> List.filter .selected
                 |> List.map .account
                 |> String.join " "
+
+        txLink =
+            "https://eosflare.io/tx/" ++ model.transactionId
+
+        socialTxt =
+            "I voted like a boss using @CypherglassBP LENS! EOS Civic Duty mode ACTIVE! Check it out: " ++ txLink
+
+        twitterLink =
+            "https://twitter.com/intent/tweet?text=" ++ socialTxt
+
+        facebookLink =
+            "https://www.facebook.com/sharer.php?u=cypherglass.com/lens/" ++ socialTxt
     in
         pageView model
             [ div [ class "has-text-centered" ]
@@ -394,7 +406,7 @@ successView model =
                     [ text "Your Transaction Id is "
                     , strong [] [ text model.transactionId ]
                     , text " - "
-                    , a [ href ("https://eosflare.io/tx/" ++ model.transactionId), target "_blank" ]
+                    , a [ href txLink, target "_blank" ]
                         [ text "Check it here!" ]
                     ]
                 , p [ class "has-margin-top" ]
@@ -403,19 +415,19 @@ successView model =
                     , text " to World!"
                     ]
                 , p [ class "has-margin-top" ]
-                    [ a [ href "https://twitter.com", target "_blank", class "button is-info" ]
+                    [ a [ href twitterLink, target "_blank", class "button is-info" ]
                         [ span [ class "icon" ] [ icon "twitter" False False ]
                         , span [] [ text "Share on Twitter" ]
                         ]
                     , span [] [ text " " ]
-                    , a [ href "https://facebook.com", target "_blank", class "button is-link" ]
+                    , a [ href facebookLink, target "_blank", class "button is-link" ]
                         [ span [ class "icon" ] [ icon "facebook" False False ]
                         , span [] [ text "Share on Facebook" ]
                         ]
                     ]
                 , p [ class "has-margin-top-2x" ]
                     [ p [] [ text "Do you have more accounts to vote?" ]
-                    , a [ class "has-margin-top button is-primary", onClick StartVoting ] [ text "New Voting Session" ]
+                    , a [ class "has-margin-top button is-primary", onClick ReInitialize ] [ text "New Voting Session" ]
                     ]
                 ]
             ]
