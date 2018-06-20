@@ -28,7 +28,11 @@ welcomeView model =
     div [ class "welcome" ]
         [ img [ src "assets/logo-cg.svg" ] []
         , p [ class "has-margin-top logo" ] [ text "LENS" ]
-        , p [ class "has-margin-top" ] [ text "The safer and easiest way to vote for EOS Block Producers" ]
+        , p [ class "has-margin-top" ]
+            [ text "The safer and easiest way to vote for EOS Block Producers."
+            , br [] []
+            , text "This tool will not store your EOS private key on your computer or transmit it over the internet."
+            ]
         , a [ class "button is-info has-margin-top", onClick StartVoting ] [ text "Start Voting Session" ]
         ]
 
@@ -121,13 +125,13 @@ producerRow producer =
                     [ onClick (ToggleBpSelection producer.account)
                     , class "has-text-success"
                     ]
-                    [ icon "check" False False ]
+                    [ icon "check-square-o" False False ]
             else
                 a
                     [ onClick (ToggleBpSelection producer.account)
                     , class "has-text-grey"
                     ]
-                    [ icon "close" False False ]
+                    [ icon "square-o" False False ]
 
         bpLink =
             a [ href producer.url, target "_blank" ] [ text producer.url ]
@@ -227,31 +231,75 @@ listBpsView model =
             ]
 
 
-pkModal : Model -> Html Msg
-pkModal model =
+pkSection : Model -> Html Msg
+pkSection model =
     let
+        ( signSubmit, signDisabled ) =
+            if model.isLoading > 0 || model.pk == Nothing || model.pkAccount == Nothing then
+                ( NoOp, True )
+            else
+                ( SignWithPk, False )
+
+        submitButton =
+            p [ class "has-text-centered has-margin-top" ]
+                [ a
+                    [ class "button is-success"
+                    , onClick signSubmit
+                    , disabledAttribute signDisabled
+                    ]
+                    [ text "Sign Transaction" ]
+                ]
+
+        intro =
+            if model.transactionSignature == Nothing then
+                (div []
+                    [ p [] [ text "You will be prompted to enter your private key on the next screen." ]
+                    , p [] [ text "Please insure that you are in a private place, where nobody can see your computer screen, and that your computer is not connected to a network via cable or wireless." ]
+                    ]
+                )
+            else
+                text ""
+
+        statusText =
+            if model.transactionSignature /= Nothing && not model.isNetworkConnected then
+                p [ class "has-margin-top" ]
+                    [ text "You are still "
+                    , strong [ class "has-text-danger" ] [ text "OFFLINE" ]
+                    , text ", please go Online to Submit your Vote!"
+                    ]
+            else
+                text ""
+
         pkForm =
             if model.transactionSignature /= Nothing then
                 div []
                     [ strong [ class "has-text-success" ] [ text "Your transaction was signed and your Private Key was already destroyed from the session safely." ]
-                    , p [ class "has-margin-top" ]
-                        [ text "You can now go "
-                        , strong [ class "has-text-success" ] [ text "ONLINE" ]
-                        , text ", close this modal and confirm your vote!"
+                    , statusText
+                    , div [ class "has-text-centered has-margin-top" ]
+                        [ p [] [ text ("Your voting transaction is prepared and will expire in " ++ (toString model.expirationCounter) ++ " seconds.") ]
+                        , p [ class "has-margin-top" ]
+                            [ a [ class "button is-success", disabledAttribute (model.isLoading > 0), onClick PushTransaction ] [ text "Submit Vote" ] ]
+                        , p [ class "has-margin-top" ]
+                            [ a [ class "button is-danger", disabledAttribute (model.isLoading > 0), onClick ReInitialize ] [ text "Cancel and Restart" ] ]
                         ]
                     ]
             else if model.isNetworkConnected && not model.isOnlineConsent then
                 div []
-                    [ p []
-                        [ text "We detected that you are "
+                    [ intro
+                    , p [ class "has-margin-top" ]
+                        [ text "Cypherglass Lens has detected that your computer is still "
                         , span [ class "has-text-success" ] [ text " ONLINE" ]
-                        , text ". We highly recommend you to go offline before entering your private key and signing the transaction."
+                        , text ". We highly recommend you go offline before entering your private key on the next screen and signing the transaction."
                         ]
-                    , a [ onClick AcceptOnlineConsent, class "has-text-danger" ] [ text "I understand the risks and I want to sign my vote online" ]
+                    , p [] [ a [ onClick ToggleDisconnectionModal ] [ text "Disconnection Instructions" ] ]
+                    , p [ class "has-text-centered" ] [ a [ onClick AcceptOnlineConsent, class "button is-danger" ] [ text "I understand the risks and I want to sign my vote online" ] ]
+                    , backButton
                     ]
             else
                 div [ class "has-margin-top" ]
-                    [ passwordInput
+                    [ p [] [ text "Please enter your private key below." ]
+                    , p [] [ text "Cypherglass Lens will never store your private key.  You will enter it once below while you are offline to create a transaction.  Once the transaction is ready to send, no record of your private key will exist on this computer." ]
+                    , passwordInput
                         model.isLoading
                         "Private Key"
                         (Maybe.withDefault "" model.pk)
@@ -267,25 +315,35 @@ pkModal model =
                         "user"
                         UpdatePkAccount
                         False
+                    , submitButton
+                    , backButton
                     ]
 
-        submitButton =
-            if model.pk /= Nothing && model.pkAccount /= Nothing then
-                Just ( "Submit", SignWithPk )
-            else
-                Nothing
-    in
-        modalCard model.isLoading
-            "Sign with Private Key"
-            TogglePkModal
-            [ div [ class "content" ]
-                [ p [] [ text "Enter the Private Key in any Application is a delicated action and it deserves the maximum possible care." ]
-                , p [] [ text "Please understand that right after we prepare your voting transaction, we destroy your private key and we never save it anywhere." ]
-                , pkForm
+        backButton =
+            p [ class "has-text-centered has-margin-top" ]
+                [ a [ class "button", onClick TogglePkSection ]
+                    [ text "Go Back and Choose Another Option" ]
                 ]
+    in
+        div []
+            [ h1 [ class "title" ] [ text "Sign with Private Key" ]
+            , div [ class "content" ] [ pkForm ]
             ]
-            submitButton
-            (Just ( "Close", TogglePkModal ))
+
+
+disconnectionModal : Html Msg
+disconnectionModal =
+    modalCard 0
+        "Disconnection Instructions"
+        ToggleDisconnectionModal
+        [ div [ class "content" ]
+            [ p [] [ text "WIRED: To disconnect your PC or Mac from a wired network, simply disconnect the cable." ]
+            , p [] [ text "PC: To disconnect your PC from a wireless network click on the wireless icon in the lower right of your system tray and then click disconnect." ]
+            , p [] [ text "MAC: To disconnect your Mac from a wireless network click on the wireless icon in the upper right of your system tray and then click in \"Turn Wi-Fi Off\"." ]
+            ]
+        ]
+        Nothing
+        Nothing
 
 
 enterPkView : Model -> Html Msg
@@ -294,48 +352,37 @@ enterPkView model =
         Just blockData ->
             let
                 modal =
-                    if model.showPkModal then
-                        pkModal model
+                    if model.showDisconnectionModal then
+                        disconnectionModal
                     else
                         text ""
 
                 signatureContent =
-                    case model.transactionSignature of
-                        Just transaction ->
-                            div []
-                                [ div [ class "has-text-centered" ]
-                                    [ h1 [ class "title" ] [ text "Signed Transaction" ]
-                                    , p [] [ text ("Your voting transaction is prepared and will expire in " ++ (toString model.expirationCounter) ++ " seconds.") ]
-                                    , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-success", disabledAttribute (model.isLoading > 0), onClick PushTransaction ] [ text "Submit Vote" ] ]
-                                    , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-danger", disabledAttribute (model.isLoading > 0), onClick ReInitialize ] [ text "Cancel and Restart" ] ]
-                                    ]
+                    if model.showPkSection then
+                        pkSection model
+                    else
+                        div []
+                            [ div [ class "has-text-centered" ]
+                                [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
+                                , a [ class "button is-info", onClick TogglePkSection ] [ text "Sign with Private Key" ]
                                 ]
-
-                        Nothing ->
-                            div []
-                                [ div [ class "has-text-centered" ]
-                                    [ h1 [ class "title" ] [ text "Sign Voting Transaction" ]
-                                    , a [ class "button is-info", onClick TogglePkModal ] [ text "Sign with Private Key" ]
+                            , div [ class "has-text-centered has-margin-top-2x" ]
+                                [ small []
+                                    [ text "Hardware Wallets Coming Soon... "
+                                    , a [ target "_blank", href "https://steemit.com/eos/@cypherglass/usd100k-eos-hardware-wallet-bounty" ]
+                                        [ text "Learn More" ]
                                     ]
-                                , div [ class "has-text-centered has-margin-top-2x" ]
-                                    [ small []
-                                        [ text "Hardware Wallets Coming Soon... "
-                                        , a [ target "_blank", href "https://steemit.com/eos/@cypherglass/usd100k-eos-hardware-wallet-bounty" ]
-                                            [ text "Learn More" ]
-                                        ]
-                                    , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
-                                    , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
-                                        ]
-                                    , p [ class "has-margin-top" ]
-                                        []
-                                    , p [ class "has-margin-top" ]
-                                        [ a [ class "button is-danger", onClick ReInitialize ] [ text "Cancel and Restart" ] ]
+                                , p [ class "has-margin-top" ]
+                                    [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Ledger Nano" ] ]
+                                , p [ class "has-margin-top" ]
+                                    [ a [ class "button is-success", attribute "disabled" "" ] [ text "Sign with Trezor" ]
                                     ]
+                                , p [ class "has-margin-top" ]
+                                    []
+                                , p [ class "has-margin-top" ]
+                                    [ a [ class "button is-danger", onClick ReInitialize ] [ text "Cancel and Restart" ] ]
                                 ]
+                            ]
             in
                 pageView model
                     [ (columns
@@ -389,14 +436,17 @@ successView model =
         txLink =
             "https://eosflare.io/tx/" ++ model.transactionId
 
+        lensLink =
+            "cypherglass.com/lens"
+
         socialTxt =
-            "I voted like a boss using @CypherglassBP LENS! EOS Civic Duty mode ACTIVE! Check it out: " ++ txLink
+            "I supported the EOS community and voted for an EOS Block Producer using @CypherglassBP Lens! Check it out: " ++ lensLink
 
         twitterLink =
             "https://twitter.com/intent/tweet?text=" ++ socialTxt
 
         facebookLink =
-            "https://www.facebook.com/sharer.php?u=cypherglass.com/lens/" ++ socialTxt
+            "https://www.facebook.com/sharer.php?u=" ++ lensLink
     in
         pageView model
             [ div [ class "has-text-centered" ]
@@ -410,9 +460,9 @@ successView model =
                         [ text "Check it here!" ]
                     ]
                 , p [ class "has-margin-top" ]
-                    [ text "Spread your "
+                    [ text "Spread the word of your "
                     , strong [] [ text "AMAZING EOS Civic Duty" ]
-                    , text " to World!"
+                    , text " to the World!"
                     ]
                 , p [ class "has-margin-top" ]
                     [ a [ href twitterLink, target "_blank", class "button is-info" ]

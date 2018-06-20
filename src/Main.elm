@@ -94,23 +94,28 @@ update msg model =
     case msg of
         Tick time ->
             let
-                expirationCounter =
-                    if model.expirationCounter > 0 then
-                        model.expirationCounter - 1
+                ( expirationCounter, transactionSignature ) =
+                    if model.expirationCounter > 5 then
+                        ( model.expirationCounter - 1, model.transactionSignature )
                     else
-                        model.expirationCounter
+                        ( 0, Nothing )
 
-                transactionSignature =
-                    if expirationCounter > 0 then
-                        model.transactionSignature
+                -- go back to voting page if it's resetting expiration
+                ( showPkSection, isOnlineConsent, pk, pkAccount ) =
+                    if model.expirationCounter > 0 && expirationCounter == 0 then
+                        ( False, False, Nothing, Nothing )
                     else
-                        Nothing
+                        ( model.showPkSection, model.isOnlineConsent, model.pk, model.pkAccount )
             in
                 ( { model
                     | currentTime = time
                     , notifications = updateNotifications model.notifications model.currentTime
                     , expirationCounter = expirationCounter
                     , transactionSignature = transactionSignature
+                    , showPkSection = showPkSection
+                    , isOnlineConsent = isOnlineConsent
+                    , pk = pk
+                    , pkAccount = pkAccount
                   }
                 , Cmd.none
                 )
@@ -198,8 +203,11 @@ update msg model =
         UpdatePkAccount text ->
             ( { model | pkAccount = Just text }, Cmd.none )
 
-        TogglePkModal ->
-            ( { model | showPkModal = not model.showPkModal, isOnlineConsent = False, pk = Nothing, pkAccount = Nothing }, Cmd.none )
+        TogglePkSection ->
+            ( { model | showPkSection = not model.showPkSection, isOnlineConsent = False, pk = Nothing, pkAccount = Nothing }, Cmd.none )
+
+        ToggleDisconnectionModal ->
+            ( { model | showDisconnectionModal = not model.showDisconnectionModal }, Cmd.none )
 
         AcceptOnlineConsent ->
             ( { model | isOnlineConsent = True, pk = Nothing, pkAccount = Nothing }, Cmd.none )

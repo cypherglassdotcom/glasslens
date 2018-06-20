@@ -48,7 +48,8 @@ type alias Model =
     , step : Step
     , pk : Maybe String
     , pkAccount : Maybe String
-    , showPkModal : Bool
+    , showPkSection : Bool
+    , showDisconnectionModal : Bool
     , transactionSignature : Maybe String
     , isLoading : Int
     , notifications : List Notification
@@ -67,7 +68,8 @@ initialModel =
     , step = Welcome
     , pk = Nothing
     , pkAccount = Nothing
-    , showPkModal = False
+    , showPkSection = False
+    , showDisconnectionModal = False
     , transactionSignature = Nothing
     , isLoading = 0
     , notifications = []
@@ -105,7 +107,8 @@ type Msg
     | GetBlockDataOk JD.Value
     | GetBlockDataFail String
     | ToggleBpSelection String
-    | TogglePkModal
+    | TogglePkSection
+    | ToggleDisconnectionModal
     | SetNetworkOnline Bool
     | AcceptOnlineConsent
     | UpdatePk String
