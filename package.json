@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "PUBLIC_URL=./ node scripts/build.js",
+    "build": "PUBLIC_URL=./ node scripts/build.js && rm -rf electron/build && cp -R build electron/build",
     "start": "node scripts/start.js",
     "package": "elm-package",
     "make": "elm-make",

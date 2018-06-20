@@ -1,18 +1,41 @@
 {
   "name": "cypherglass-lens-electron",
   "version": "0.1.0",
-  "description": "",
+  "description": "Vote safely for your EOS Block Producers",
+  "homepage": "https://cypherglass.com",
   "main": "index.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --mac --win --linux"
+  },
+  "repository": {
+    "url": ""
   },
   "author": "Leo Ribeiro",
   "license": "MIT",
-  "devDependencies": {
-    "electron": "2.0.2"
+  "build": {
+    "appId": "com.cypherglass.lens",
+    "directories": {
+      "buildResources": "build-resources"
+    },
+    "mac": {
+      "category": "public.app-category.lifestyle",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "portable"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   },
   "productName": "Cypherglass LENS",
+  "copyright": "Copyright © 2018 Cypherglass",
   "dependencies": {
     "open": "0.0.5"
+  },
+  "devDependencies": {
+    "electron": "2.0.2",
+    "electron-builder": "^20.15.1"
   }
 }

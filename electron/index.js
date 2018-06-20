@@ -9,7 +9,7 @@ const open = require("open");
 
   function createWindow () {
     // Create the browser window.
-    win = new BrowserWindow({width: 980, height: 600})
+    win = new BrowserWindow({width: 1081, height: 600})
 
     // Create the Application's main menu
     var template = [
