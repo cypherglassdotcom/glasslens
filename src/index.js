@@ -2,8 +2,8 @@ import './css/main.css';
 import { Main } from './Main.elm';
 import registerServiceWorker from './registerServiceWorker';
 
-//const API_URL = 'https://api.cypherglass.com';
-const API_URL = 'http://199.27.232.138:8888';
+const API_URL = 'https://api.cypherglass.com';
+// const API_URL = 'http://199.27.232.138:8888';
 const PRODUCERS_ACCOUNT = 'eosio';
 const PRODUCERS_SCOPE = 'eosio';
 const PRODUCERS_TABLE = 'producers';

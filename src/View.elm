@@ -29,7 +29,7 @@ welcomeView model =
         [ img [ src "assets/logo-cg.svg" ] []
         , p [ class "has-margin-top logo" ] [ text "LENS" ]
         , p [ class "has-margin-top" ]
-            [ text "The safer and easiest way to vote for EOS Block Producers."
+            [ text "The safest and easiest way to vote for EOS Block Producers."
             , br [] []
             , text "This tool will not store your EOS private key on your computer or transmit it over the internet."
             ]
@@ -254,7 +254,7 @@ pkSection model =
             if model.transactionSignature == Nothing then
                 (div []
                     [ p [] [ text "You will be prompted to enter your private key on the next screen." ]
-                    , p [] [ text "Please insure that you are in a private place, where nobody can see your computer screen, and that your computer is not connected to a network via cable or wireless." ]
+                    , p [] [ text "Please ensure that you are in a private place, where nobody can see your computer screen, and that your computer is not connected to a network via cable or wireless." ]
                     ]
                 )
             else
