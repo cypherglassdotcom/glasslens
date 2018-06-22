@@ -1,7 +1,7 @@
 module Components exposing (..)
 
-import Html exposing (Html, Attribute, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li, header, footer, input, label)
-import Html.Attributes exposing (src, class, attribute, colspan, href, target, placeholder, type_, defaultValue)
+import Html exposing (Html, Attribute, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li, header, footer, input, label, select, option)
+import Html.Attributes exposing (src, class, attribute, colspan, href, target, placeholder, type_, defaultValue, value)
 import Html.Events exposing (onClick, onInput)
 
 
@@ -11,6 +11,45 @@ disabledAttribute isDisabled =
         attribute "disabled" "true"
     else
         attribute "data-empty" ""
+
+
+selectInput : Bool -> List ( String, String ) -> String -> String -> String -> (String -> msg) -> Html msg
+selectInput isLoading optionsType fieldLabel fieldValue fieldIcon fieldMsg =
+    let
+        options =
+            optionsType
+                |> List.map
+                    (\( optVal, optText ) ->
+                        let
+                            selectedAttr =
+                                if optVal == fieldValue then
+                                    [ value optVal
+                                    , attribute "selected" ""
+                                    ]
+                                else
+                                    [ value optVal ]
+                        in
+                            option
+                                selectedAttr
+                                [ text optText ]
+                     -- option [ value optVal ] [ text optText ]
+                    )
+
+        loadingClass =
+            if isLoading then
+                " is-loading"
+            else
+                ""
+    in
+        div [ class "field" ]
+            [ label [ class "label is-small" ]
+                [ text fieldLabel ]
+            , div [ class ("control has-icons-left" ++ loadingClass) ]
+                [ div [ class "select is-small is-fullwidth" ]
+                    [ select [ onInput fieldMsg, disabledAttribute isLoading ] options ]
+                , icon fieldIcon False True
+                ]
+            ]
 
 
 icon : String -> Bool -> Bool -> Html msg

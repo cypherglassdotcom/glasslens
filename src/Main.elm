@@ -197,6 +197,9 @@ update msg model =
             in
                 ( { model | notifications = notifications }, Cmd.none )
 
+        SetOrderType str ->
+            ( { model | orderType = str }, Cmd.none )
+
         UpdatePk text ->
             ( { model | pk = Just text }, Cmd.none )
 
@@ -374,6 +377,7 @@ producerDecoder =
         |> JDP.hardcoded 5000
         |> JDP.hardcoded 0.0
         |> JDP.hardcoded False
+        |> JDP.required "random" JD.int
 
 
 blockDataDecoder : JD.Decoder BlockData

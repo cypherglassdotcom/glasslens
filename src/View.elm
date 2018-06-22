@@ -1,10 +1,11 @@
 module View exposing (..)
 
 import Model exposing (..)
-import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, passwordInput, fieldInput, disabledAttribute)
+import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, passwordInput, fieldInput, disabledAttribute, selectInput)
 import Html exposing (Html, div, img, p, text, a, button, section, span, nav, tr, td, table, thead, th, li, ul, h1, strong, br, small, pre)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
+import Random
 
 
 view : Model -> Html Msg
@@ -187,6 +188,27 @@ selectedBpsList producers =
 listBpsView : Model -> Html Msg
 listBpsView model =
     let
+        cypherglassProducer =
+            model.producers
+                |> List.take 1
+
+        restProducers =
+            model.producers
+                |> List.take 51
+                |> List.drop 1
+                |> List.sortWith
+                    (\a b ->
+                        if model.orderType == "A" then
+                            compare a.account b.account
+                        else if model.orderType == "R" then
+                            compare a.random b.random
+                        else
+                            compare b.totalVotes a.totalVotes
+                    )
+
+        adjustedProducers =
+            cypherglassProducer ++ restProducers ++ (model.producers |> List.drop 51)
+
         selectedProducers =
             model.producers
                 |> List.filter (\p -> p.selected)
@@ -196,6 +218,18 @@ listBpsView model =
 
         currentProducer =
             List.head selectedProducers
+
+        orderOptions =
+            selectInput
+                (model.isLoading > 0)
+                [ ( "", "Order by Total Votes" )
+                , ( "A", "Top 50 - Alphabetical Order" )
+                , ( "R", "Top 50 - Random Order" )
+                ]
+                ""
+                model.orderType
+                "sort"
+                SetOrderType
 
         ( voteButtonClass, voteButtonTxt, voteAttr, voteOp ) =
             case currentProducer of
@@ -224,9 +258,9 @@ listBpsView model =
                 [ text voteButtonTxt ]
     in
         pageView model
-            [ titleMenu "Producers List" [ voteButton ]
+            [ titleMenu "Producers List" [ orderOptions, voteButton ]
             , p [] [ text "Select the Block Producers you want to vote on the left first column. You can choose up to 30 Block Producers." ]
-            , producersList model.producers
+            , producersList adjustedProducers
             , p [ class "has-text-centered has-margin-top" ] [ voteButton ]
             ]
 

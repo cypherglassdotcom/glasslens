@@ -20,6 +20,7 @@ type alias Producer =
     , rank : Int
     , votesPercentage : Float
     , selected : Bool
+    , random : Int
     }
 
 
@@ -59,6 +60,7 @@ type alias Model =
     , isOnlineConsent : Bool
     , expirationCounter : Int
     , transactionId : String
+    , orderType : String
     }
 
 
@@ -79,6 +81,7 @@ initialModel =
     , isOnlineConsent = False
     , expirationCounter = 0
     , transactionId = ""
+    , orderType = ""
     }
 
 
@@ -120,4 +123,5 @@ type Msg
     | PushTransactionOk String
     | PushTransactionFail String
     | ReInitialize
+    | SetOrderType String
     | NoOp

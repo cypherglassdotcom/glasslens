@@ -32,7 +32,11 @@ app.ports.listProducers.subscribe(async () => {
   });
 
   if (producersList && producersList.rows) {
-    app.ports.listProducersOk.send(producersList.rows);
+    const rows = producersList.rows.map(r => {
+      r.random = Math.floor(Math.random() * 10)
+      return r;
+    })
+    app.ports.listProducersOk.send(rows);
   }
 });
 
