@@ -1,7 +1,7 @@
 {
   "name": "cypherglass-lens-electron",
-  "version": "0.1.0",
-  "description": "Vote safely for your EOS Block Producers",
+  "version": "1.0.0",
+  "description": "Cypherglass Lens: the safest voting tool",
   "homepage": "https://cypherglass.com",
   "main": "index.js",
   "scripts": {

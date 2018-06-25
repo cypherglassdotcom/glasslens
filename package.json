@@ -1,7 +1,7 @@
 {
-  "name": "cypherglass-voting",
-  "version": "0.1.0",
-  "description": "Cypherglass VOTING Tool",
+  "name": "cypherglass-lens",
+  "version": "1.0.0",
+  "description": "Cypherglass Lens: the safest voting tool",
   "main": "index.js",
   "directories": {
     "test": "tests"

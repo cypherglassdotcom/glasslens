@@ -5,7 +5,6 @@ import Components exposing (icon, loadingIcon, titleMenu, modalCard, columns, pa
 import Html exposing (Html, div, img, p, text, a, button, section, span, nav, tr, td, table, thead, th, li, ul, h1, strong, br, small, pre)
 import Html.Attributes exposing (src, class, attribute, colspan, href, target)
 import Html.Events exposing (onClick)
-import Random
 
 
 view : Model -> Html Msg
@@ -194,16 +193,14 @@ listBpsView model =
 
         restProducers =
             model.producers
-                |> List.take 51
+                |> List.take 101
                 |> List.drop 1
                 |> List.sortWith
                     (\a b ->
-                        if model.orderType == "A" then
-                            compare a.account b.account
-                        else if model.orderType == "R" then
+                        if model.orderType == "R" then
                             compare a.random b.random
                         else
-                            compare b.totalVotes a.totalVotes
+                            compare a.account b.account
                     )
 
         adjustedProducers =
@@ -222,9 +219,8 @@ listBpsView model =
         orderOptions =
             selectInput
                 (model.isLoading > 0)
-                [ ( "", "Order by Total Votes" )
-                , ( "A", "Top 50 - Alphabetical Order" )
-                , ( "R", "Top 50 - Random Order" )
+                [ ( "", "Top 100 - Alphabetical Order" )
+                , ( "R", "Top 100 - Random Order" )
                 ]
                 ""
                 model.orderType
@@ -307,7 +303,7 @@ pkSection model =
         pkForm =
             if model.transactionSignature /= Nothing then
                 div []
-                    [ strong [ class "has-text-success" ] [ text "Your transaction was signed and your Private Key was already destroyed from the session safely." ]
+                    [ strong [ class "has-text-success" ] [ text "Your transaction was signed.  Your Private Key has not been saved on this computer, and has been erased from system memory." ]
                     , statusText
                     , div [ class "has-text-centered has-margin-top" ]
                         [ p [] [ text ("Your voting transaction is prepared and will expire in " ++ (toString model.expirationCounter) ++ " seconds.") ]

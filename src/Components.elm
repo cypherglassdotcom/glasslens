@@ -187,6 +187,7 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
                     ]
                     [ input
                         [ class "input"
+                        , attribute "autocomplete" "off"
                         , placeholder fieldPlaceHolder
                         , type_ fieldType
                         , defaultValue fieldValue
