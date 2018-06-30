@@ -3,16 +3,18 @@ Cypherglass EOS Voting Tool
 
 ## Voting Flow
 
-1. Open app
-2. Immediately display the list of BPs, with Cypherglass autoselected on top
-3. They click on BPs and then click vote
-4. App prompts to disconnect network
-5. App shows a online/offline status, if the user stays online in this step it
-warns the user
-6. They enter private key — `this screen could be integrated with the
-future ledger/trezor hd wallets`
-7. Transaction is created
-8. Then they go back online and submit the transaction
-9. Popups message saying no private info was sent over the network or
-written to hard drive, and pk has been destroyed
-10. Option to close the application or start a new voting session
+1.  Open https://www.cypherglass.com/lens/
+2.  Select Browser version or download and run executable for specific OS
+3.  Click \<Start Voting Session>
+4.  Select Block Producers to vote for
+5.  Click \<Confirm Vote for>
+6.  Click \<Sign with Private Key>
+7.  Take machine offline following the provided instructions
+8.  Verify that the Online/Offline button in the upper right is red and reads "Offline"
+9.  Enter Private Key and Username
+10. Click \<Sign Transaction>
+11. Bring machine back online and verify that the Online/Offline button in the upper right is green and reads "Online"
+12. Click \<Submit Vote>
+13. Verify that the "Thanks for Voting with Cypherglass Lens!" screen appears
+14. Close appliciation or browser window
+  
