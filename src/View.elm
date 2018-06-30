@@ -329,14 +329,15 @@ pkSection model =
                 div [ class "has-margin-top" ]
                     [ p [] [ text "Please enter your private key below." ]
                     , p [] [ text "Cypherglass Lens will never store your private key.  You will enter it once below while you are offline to create a transaction.  Once the transaction is ready to send, no record of your private key will exist on this computer." ]
-                    , passwordInput
+                    , fieldInput
                         model.isLoading
                         "Private Key"
-                        (Maybe.withDefault "" model.pk)
+                        model.tempPk
                         "Enter your Private Key"
                         "key"
                         UpdatePk
                         False
+                        BlurPk
                     , fieldInput
                         model.isLoading
                         "EOS Account Name"
@@ -345,6 +346,7 @@ pkSection model =
                         "user"
                         UpdatePkAccount
                         False
+                        NoOp
                     , submitButton
                     , backButton
                     ]
