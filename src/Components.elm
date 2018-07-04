@@ -1,8 +1,8 @@
 module Components exposing (..)
 
 import Html exposing (Html, Attribute, text, div, button, section, h1, img, p, a, nav, span, i, table, thead, th, tr, td, h3, small, strong, br, ul, li, header, footer, input, label, select, option)
-import Html.Attributes exposing (src, class, attribute, colspan, href, target, placeholder, type_, defaultValue, value)
-import Html.Events exposing (onClick, onInput, onBlur)
+import Html.Attributes exposing (src, class, attribute, colspan, href, target, placeholder, type_, defaultValue, value, id)
+import Html.Events exposing (onClick, onInput)
 
 
 disabledAttribute : Bool -> Attribute msg
@@ -166,8 +166,8 @@ modalCard isLoading title close body ok cancel =
             ]
 
 
-basicFieldInput : Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> String -> msg -> Html msg
-basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly fieldType blur =
+basicFieldInput : String -> Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> String -> Html msg
+basicFieldInput fieldId isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly fieldType =
     let
         loadingClass =
             if isLoading > 0 then
@@ -187,13 +187,13 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
                     ]
                     [ input
                         [ class "input"
-                        , attribute "autocomplete" "nope"
+                        , id fieldId
+                        , attribute "autocomplete" "off"
                         , placeholder fieldPlaceHolder
                         , type_ fieldType
-                        , value fieldValue
+                        , defaultValue fieldValue
                         , onInput fieldMsg
                         , disabledAttribute (isLoading > 0)
-                        , onBlur blur
                         ]
                         []
                     , icon fieldIcon False True
@@ -206,11 +206,11 @@ basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon field
             ]
 
 
-fieldInput : Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> msg -> Html msg
-fieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly blur =
-    basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly "text" blur
+fieldInput : Int -> String -> String -> String -> String -> String -> (String -> msg) -> Bool -> Html msg
+fieldInput isLoading fieldId fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly =
+    basicFieldInput fieldId isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly "text"
 
 
-passwordInput : Int -> String -> String -> String -> String -> (String -> msg) -> Bool -> msg -> Html msg
-passwordInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly blur =
-    basicFieldInput isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly "password" blur
+passwordInput : Int -> String -> String -> String -> String -> String -> (String -> msg) -> Bool -> Html msg
+passwordInput isLoading fieldId fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly =
+    basicFieldInput fieldId isLoading fieldLabel fieldValue fieldPlaceHolder fieldIcon fieldMsg readOnly "password"

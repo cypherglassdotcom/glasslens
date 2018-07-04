@@ -257,6 +257,9 @@ html, body {
     max-width: 600px;
     margin-top: 150px; }
 
+#field-pk {
+  -webkit-text-security: disc; }
+
 .topcg.navbar {
   background-color: #23114f;
   height: 100px;

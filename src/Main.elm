@@ -201,26 +201,19 @@ update msg model =
             ( { model | orderType = str }, Cmd.none )
 
         UpdatePk text ->
-            ( { model | tempPk = text }, Cmd.none )
+            ( { model | pk = Just text }, Cmd.none )
 
         UpdatePkAccount text ->
             ( { model | pkAccount = Just text }, Cmd.none )
 
-        BlurPk ->
-            let
-                maskPk =
-                    String.repeat (String.length model.tempPk) "•"
-            in
-                ( { model | tempPk = maskPk, pk = Just model.tempPk }, Cmd.none )
-
         TogglePkSection ->
-            ( { model | showPkSection = not model.showPkSection, isOnlineConsent = False, pk = Nothing, pkAccount = Nothing, tempPk = "" }, Cmd.none )
+            ( { model | showPkSection = not model.showPkSection, isOnlineConsent = False, pk = Nothing, pkAccount = Nothing }, Cmd.none )
 
         ToggleDisconnectionModal ->
             ( { model | showDisconnectionModal = not model.showDisconnectionModal }, Cmd.none )
 
         AcceptOnlineConsent ->
-            ( { model | isOnlineConsent = True, pk = Nothing, pkAccount = Nothing, tempPk = "" }, Cmd.none )
+            ( { model | isOnlineConsent = True, pk = Nothing, pkAccount = Nothing }, Cmd.none )
 
         SignWithPk ->
             let
@@ -255,7 +248,6 @@ update msg model =
                 | transactionSignature = Just signature
                 , pk = Nothing
                 , pkAccount = Nothing
-                , tempPk = ""
                 , isLoading = model.isLoading - 1
                 , expirationCounter = defaultTransactionExpiration
               }

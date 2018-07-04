@@ -204,7 +204,7 @@ listBpsView model =
                     )
 
         adjustedProducers =
-            cypherglassProducer ++ restProducers ++ (model.producers |> List.drop 51)
+            cypherglassProducer ++ restProducers ++ (model.producers |> List.drop 101)
 
         selectedProducers =
             model.producers
@@ -331,22 +331,22 @@ pkSection model =
                     , p [] [ text "Cypherglass Lens will never store your private key.  You will enter it once below while you are offline to create a transaction.  Once the transaction is ready to send, no record of your private key will exist on this computer." ]
                     , fieldInput
                         model.isLoading
+                        "field-pk"
                         "Private Key"
-                        model.tempPk
+                        (Maybe.withDefault "" model.pk)
                         "Enter your Private Key"
                         "key"
                         UpdatePk
                         False
-                        BlurPk
                     , fieldInput
                         model.isLoading
+                        "field-account"
                         "EOS Account Name"
                         (Maybe.withDefault "" model.pkAccount)
                         "Enter your EOS Account"
                         "user"
                         UpdatePkAccount
                         False
-                        NoOp
                     , submitButton
                     , backButton
                     ]

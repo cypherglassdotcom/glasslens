@@ -61,7 +61,6 @@ type alias Model =
     , expirationCounter : Int
     , transactionId : String
     , orderType : String
-    , tempPk : String
     }
 
 
@@ -83,7 +82,6 @@ initialModel =
     , expirationCounter = 0
     , transactionId = ""
     , orderType = ""
-    , tempPk = ""
     }
 
 
@@ -126,5 +124,4 @@ type Msg
     | PushTransactionFail String
     | ReInitialize
     | SetOrderType String
-    | BlurPk
     | NoOp

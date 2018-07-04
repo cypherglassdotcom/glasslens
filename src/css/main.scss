@@ -30,6 +30,10 @@ html, body {
   }
 }
 
+#field-pk {
+  -webkit-text-security: disc;
+}
+
 .topcg.navbar {
   background-color: $cg-color;
   height: 100px;
