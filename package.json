@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "PUBLIC_URL=./ node scripts/build.js && rm -rf electron/build && cp -R build electron/build",
+    "build-browser": "node scripts/build.js && rm cypherglass-lens-1.0.0-web.zip && zip -r cypherglass-lens-1.0.0-web.zip build",
     "start": "node scripts/start.js",
     "package": "elm-package",
     "make": "elm-make",
